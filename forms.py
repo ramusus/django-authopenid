@@ -1,3 +1,18 @@
+"""
+ Copyright 2007 Benoît Chesneau 
+ Licensed under the Apache License, Version 2.0 (the "License"); 
+ you may not use this file except in compliance with the License. 
+ You may obtain a copy of the License at
+
+ http://www.apache.org/licenses/LICENSE-2.0 
+ 
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+"""
+
 from django import newforms as forms
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
@@ -9,6 +24,7 @@ attrs_dict = { 'class': 'required login' }
 username_re = re.compile(r'^\w+$')
 
 class OpenidAuthForm(forms.Form):
+    """ legacy account signin form """
     next = forms.CharField(max_length=255,widget=forms.HiddenInput(), required=False)
     username = forms.CharField(max_length=30,  widget=forms.widgets.TextInput(attrs=attrs_dict))
     password = forms.CharField(max_length=128, widget=forms.widgets.PasswordInput(attrs=attrs_dict))
@@ -48,6 +64,7 @@ class OpenidAuthForm(forms.Form):
             
 
 class OpenidRegisterForm(forms.Form):
+    """ openid signin form """
     next = forms.CharField(max_length=255,widget=forms.HiddenInput(), required=False)
 
     username = forms.CharField(max_length=30, widget=forms.widgets.TextInput(attrs=attrs_dict))
@@ -74,6 +91,7 @@ class OpenidRegisterForm(forms.Form):
  
     
 class OpenidVerifyForm(forms.Form):
+    """ openid verify form (associate an openid with an account) """
     next = forms.CharField(max_length=255,widget=forms.HiddenInput(), required=False)
     username = forms.CharField(max_length=30, widget=forms.widgets.TextInput(attrs=attrs_dict))
     password = forms.CharField(max_length=128, widget=forms.widgets.PasswordInput(attrs=attrs_dict))
@@ -105,6 +123,8 @@ attrs_dict = { 'class': 'required' }
 username_re = re.compile(r'^\w+$')
 
 class RegistrationForm(forms.Form):
+    """ legacy registration form """
+
     next = forms.CharField(max_length=255,widget=forms.HiddenInput(), required=False)
     username = forms.CharField(max_length=30,
                                widget=forms.TextInput(attrs=attrs_dict),
@@ -153,6 +173,7 @@ class RegistrationForm(forms.Form):
 
 
 class ChangepwForm(forms.Form):
+    """ change password form """
     username = forms.CharField(max_length=30,widget=forms.HiddenInput())
     oldpw = forms.CharField(widget=forms.PasswordInput(attrs=attrs_dict))
     password1 = forms.CharField(widget=forms.PasswordInput(attrs=attrs_dict))
@@ -181,6 +202,7 @@ class ChangepwForm(forms.Form):
         
         
 class ChangeemailForm(forms.Form):
+    """ change email form """
     username = forms.CharField(max_length=30,widget=forms.HiddenInput())
     email = forms.CharField(max_length=255,widget=forms.TextInput(attrs={'class': "required validate-email" }))
     password = forms.CharField(widget=forms.PasswordInput(attrs=attrs_dict))
@@ -201,11 +223,13 @@ class ChangeemailForm(forms.Form):
         return self.cleaned_data['password']
                 
 class ChangeopenidForm(forms.Form):
+    """ change openid form """
     username = forms.CharField(max_length=30,widget=forms.HiddenInput())
     openid_url = forms.CharField(max_length=255,widget=forms.TextInput(attrs={'class': "required" }))
 
 
 class DeleteForm(forms.Form):
+    """ confirm form to delete an account """
     username = forms.CharField(max_length=30,widget=forms.HiddenInput())
     confirm = forms.CharField(widget=forms.CheckboxInput(attrs=attrs_dict))
     password = forms.CharField(widget=forms.PasswordInput(attrs=attrs_dict))
@@ -227,6 +251,7 @@ class DeleteForm(forms.Form):
 
 
 class EmailPasswordForm(forms.Form):
+    """ send new password form """
     username = forms.CharField(max_length=30,widget=forms.TextInput(attrs={'class': "required" }))
 
     def __init__(self, data=None, files=None, auto_id='id_%s', prefix=None, initial=None):

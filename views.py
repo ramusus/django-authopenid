@@ -1,3 +1,19 @@
+"""
+ Copyright 2007 Benoît Chesneau 
+ Licensed under the Apache License, Version 2.0 (the "License"); 
+ you may not use this file except in compliance with the License. 
+ You may obtain a copy of the License at
+
+ http://www.apache.org/licenses/LICENSE-2.0 
+ 
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+"""
+
+
 from django.http import HttpResponse, HttpResponseRedirect, get_host
 from django.shortcuts import render_to_response as render
 from django.template import RequestContext, loader, Context
@@ -27,6 +43,15 @@ from decorators import username_test
 
 
 def signin(request):
+    """
+    signin page. It manage the legacy authentification (user/password) 
+    and authentification with openid.
+
+    url: /signin/
+    
+    template : authopenid/signin.htm
+    """
+
     on_failure = signin_failure
     extension_args = {}
     next = ''
@@ -95,10 +120,21 @@ def signin(request):
     })
 
 def complete_signin(request):
+    """ in case of complete signin with openid """
     return complete(request, signin_success, signin_failure)
 
 
 def signin_success(request, identity_url, openid_response):
+    """
+    openid signin success.
+
+    If the openid is already registered, the user is redirected to 
+    url set par next or in settings with OPENID_REDIRECT_NEXT variable.
+    If none of these urls are set user is redirectd to /.
+
+    if openid isn't registered user is redirected to register page.
+    """
+
     request.session['openids'] = []
     openid=from_openid_response(openid_response)
     request.session['openids'].append(openid)
@@ -120,6 +156,7 @@ def signin_success(request, identity_url, openid_response):
     return HttpResponseRedirect(next)
 
 def is_association_exist(openid_url):
+    """ test if an openid is already in database """
     is_exist=True
     try:
         o=UserAssociation.objects.get(openid_url__exact=openid_url)
@@ -128,6 +165,20 @@ def is_association_exist(openid_url):
     return is_exist
 
 def register(request):
+    """
+    register an openid.
+
+    If user is already a member he can associate its openid with 
+    its account.
+
+    A new account could also be created and automaticaly associated
+    to the openid.
+
+    url : /complete/
+
+    template : authopenid/complete.html
+    """
+
     is_redirect = False
     next = request.GET.get('next', '').strip()
     if not next or not is_valid_next_url(next):
@@ -200,6 +251,11 @@ def register(request):
     }, context_instance=RequestContext(request))
 
 def signin_failure(request, message):
+    """
+    falure with openid signin. Go back to signin page.
+
+    template : "authopenid/openid.html"
+    """
     request_path=reverse('friendsnippets.django_authopenid.views.signin')
     if request.GET.get('next'):
         request_path += '?' + urllib.urlencode({
@@ -209,7 +265,7 @@ def signin_failure(request, message):
     form_signin = OpenidSigninForm(initial={'next':next})
     form_auth = OpenidAuthForm(initial={'next':next})
 
-    return render('authopenid/openid.html', {
+    return render('authopenid/signin.html', {
         'msg': message,
         'form1': form_auth,
         'form2': form_signin,
@@ -217,6 +273,13 @@ def signin_failure(request, message):
 
 
 def signup(request):
+    """
+    signup page. Create a legacy account
+
+    url : /signup/"
+
+    templates: authopenid/signup.html, authopenid/confirm_email.txt
+    """
     action_signin = reverse('django_authopenid.views.signin')
 
     next = request.GET.get('next', '/')
@@ -259,6 +322,11 @@ def signup(request):
 
     
 def signout(request):
+    """
+    signout from the website. Remove openid from session and kill it.
+
+    url : /signout/"
+    """
     request.session['openids'] = []
     next = request.GET.get('next', '/')
     if not is_valid_next_url(next):
@@ -271,6 +339,17 @@ def signout(request):
 
 
 def account_settings(request,username=None):
+    """
+    index pages to changes some basic account settings :
+     - change password
+     - change email
+     - associate a new openid
+     - delete account
+
+    url : /username/
+
+    template : account/settings.html
+    """
     msg = request.GET.get('msg', '')
     is_openid = True
 
@@ -283,10 +362,17 @@ def account_settings(request,username=None):
     return render('account/settings.html',
             {'msg': msg, 'settings_path': request.path, 'is_openid': is_openid},
             context_instance=RequestContext(request))
-account_settings = username_test(settings, 'django_authopenid.views.account_settings')
+account_settings = username_test(account_settings, 'django_authopenid.views.account_settings')
 
 
 def changepw(request,username):
+    """
+    change password view.
+
+    url : /username/changepw/
+    template: account/changepw.html
+    """
+    
     try:
         u=User.objects.get(username=username)
     except:
@@ -310,6 +396,8 @@ changepw = username_test(changepw, 'django_authopenid.views.changepw')
 
 
 def ask_openid(request, openid_url, redirect_to, on_failure=None, extension_args=None):
+    """ basic function to ask openid and return response """
+
     on_failure = on_failure or signin_failure
     extension_args = extension_args or {}
 
@@ -337,6 +425,14 @@ def ask_openid(request, openid_url, redirect_to, on_failure=None, extension_args
 
 
 def changeemail(request,username):
+    """ 
+    changeemail view. It require password or openid to allow change.
+
+    url: /username/changeemail/
+
+    template : account/changeemail.html
+    """
+
     extension_args = {}
  
     try:
@@ -403,6 +499,14 @@ def emailopenid_failure(request, message):
 
 
 def changeopenid(request, username):
+    """
+    change openid view. Allow user to change openid associated to its username.
+
+    url : /username/changeopenid/
+
+    template: account/changeopenid.html
+    """
+
     extension_args = {}
     openid_url=''
     has_openid=True
@@ -466,6 +570,15 @@ def changeopenid_failure(request, message):
     return HttpResponseRedirect(redirect_to)
     
 def delete(request,username):
+    """
+    delete view. Allow user to delete its account. Password/openid are required to 
+    confirm it. He should also check the confirm checkbox.
+
+    url : /username/delete
+
+    template : account/delete.html
+    """
+
     extension_args={}
     try:
         u=User.objects.get(username=username)
@@ -524,6 +637,16 @@ def deleteopenid_failure(request, message):
 
 
 def sendpw(request):
+    """
+    send a new password to the user. It return a mail with 
+    a new pasword and a confirm link in. To activate the 
+    new password, the user should click on confirm link.
+
+    url : /sendpw/
+
+    templates :  account/sendpw_email.txt, account/sendpw.html
+    """
+
     msg = request.GET.get('msg','')
     if request.POST:
         form = EmailPasswordForm(request.POST)
@@ -560,6 +683,18 @@ def sendpw(request):
 
 
 def confirmchangepw(request):
+    """
+    view to set new password when the user click on confirm link
+    in its mail. Basically it check if the confirm key exist, then
+    replace old password with new password and remove confirm
+    ley from the queue. Then it redirect the user to signin
+    page.
+
+    url : /sendpw/confirm/?key
+
+    """
+
+
     confirm_key = request.GET.get('key', '')
     if not confirm_key:
         return HttpResponseRedirect('/')

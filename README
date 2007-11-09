@@ -1,0 +1,72 @@
+﻿django_authopenid 
+Author : Benoît Chesneau <benoitc@metavers.net>
+Url : http://code.google.com/p/django-authopenid/
+
+Description :
+Django application to manage authenification with openid using django auth contrib.
+
+This application allow a user to connect to you website with :
+- legacy account : username/password
+- openid url
+
+If the use connect with an openid he could associate it with its legaccy account or just create a new django account. When the use is connected you could manage him like you usually do with auth contrib :
+
+http://www.djangoproject.com/documentation/authentication/
+
+This application also provide view to :
+- change password
+- change account email
+- change associated openid
+- delete account
+- send a new password
+
+To work you need to install :
+* python-openid 2.x 
+http://openidenabled.com/python-openid/
+
+* django-openidconsummer from Simon Wilison :
+http://code.google.com/p/django-openid/
+
+A this date (svn r19), django-openidconsumer works only with django-openid 1.0x. 
+You should apply the patch django_openid_r19.diff provided. If you want to use it without applying the patch add this form to forms.py :
+
+----------------------code------------------
+
+class OpenidSigninForm(forms.Form):
+    openid_url = forms.CharField(max_length=255, widget=forms.widgets.TextInput(
+attrs={'class': 'required openid'}))
+    next = forms.CharField(max_length=255,widget=forms.HiddenInput(), required=F
+alse)
+
+    def clean_openid_url(self):
+        if 'openid_url' in self.cleaned_data:
+            openid_url = self.cleaned_data['openid_url']
+            if xri.identifierScheme(openid_url) == 'XRI' and getattr(
+                settings, 'OPENID_DISALLOW_INAMES', False
+                ):
+                raise forms.ValidationError(_('i-names are not supported'))
+            return self.cleaned_data['openid_url']
+
+    def clean_next(self):
+        if 'next' in self.cleaned_data and self.cleaned_data['next'] != "":
+            next_url_re = re.compile('^/[-\w/]+$')
+            if not next_url_re.match(self.cleaned_data['next']):
+                raise forms.ValidationError(_('next url "%s" is invalid' % self.
+cleaned_data['next']))
+            return self.cleaned_data['next']
+
+--------------------------------------------------------------------
+
+and change the view to call it :
+remove line 
+
+ from django_openidconsumer.forms import OpenidSigninForm
+
+and add OpenSigninForm to 
+ 
+from forms import OpenidAuthForm, OpenidRegisterForm, OpenidVerifyForm, RegistrationForm, ChangepwForm, ChangeemailForm, ChangeopenidForm, DeleteForm, EmailPasswordForm
+
+
+Enjoy.
+
+Benoît.
