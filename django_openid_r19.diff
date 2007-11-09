@@ -1,71 +1,119 @@
+Index: util.py
+===================================================================
+--- util.py	(revision 19)
++++ util.py	(working copy)
+@@ -1,10 +1,13 @@
+ from openid.store.interface import OpenIDStore
+ from openid.association import Association as OIDAssociation
++from django.db.models.query import Q
++from django.conf import settings
++
++import openid.store
+ from yadis import xri
+ 
+-import time, base64, md5
++import time, base64, md5, operator
+ 
+-from django.conf import settings
+ from models import Association, Nonce
+ 
+ class OpenID:
+@@ -70,27 +73,37 @@
+         for assoc in assocs:
+             assoc.delete()
+         return assocs_exist
+-    
+-    def storeNonce(self, nonce):
+-        nonce, created = Nonce.objects.get_or_create(
+-            nonce = nonce, defaults={'expires': int(time.time())}
+-        )
+-    
+-    def useNonce(self, nonce):
++
++    def useNonce(self, server_url, timestamp, salt):
++        if abs(timestamp - time.time()) > openid.store.nonce.SKEW:
++            return False
++        
++        query =[
++                Q(server_url__exact=server_url),
++                Q(timestamp__exact=timestamp),
++                Q(salt__exact=salt),
++        ]
+         try:
+-            nonce = Nonce.objects.get(nonce = nonce)
++            ononce = Nonce.objects.get(reduce(operator.and_, query))
+         except Nonce.DoesNotExist:
+-            return 0
++            ononce = Nonce(
++                    server_url=server_url,
++                    timestamp=timestamp,
++                    salt=salt
++            );
++            ononce.save()
++            return True
+         
+-        # Now check nonce has not expired
+-        nonce_age = int(time.time()) - nonce.expires
+-        if nonce_age > self.max_nonce_age:
+-            present = 0
+-        else:
+-            present = 1
+-        nonce.delete()
+-        return present
+-    
++        ononce.delete()
++
++        return False
++   
++    def cleanupNonce(self):
++        Nonce.objects.filter(timestamp<int(time.time()) - nonce.SKEW).delete()
++
++    def cleaupAssociations(self):
++        Association.objects.extra(where=['issued + lifetimeint<(%s)' % time.time()]).delete()
++
+     def getAuthKey(self):
+         # Use first AUTH_KEY_LEN characters of md5 hash of SECRET_KEY
+         return md5.new(settings.SECRET_KEY).hexdigest()[:self.AUTH_KEY_LEN]
+@@ -101,6 +114,6 @@
+ def from_openid_response(openid_response):
+     issued = int(time.time())
+     return OpenID(
+-        openid_response.identity_url, issued, openid_response.signed_args, 
+-        openid_response.extensionResponse('sreg')
++        openid_response.identity_url, issued, openid_response.signed_fields, 
++        openid_response.extensionResponse('sreg', False)
+     )
 Index: views.py
 ===================================================================
 --- views.py	(revision 19)
 +++ views.py	(working copy)
-@@ -2,17 +2,28 @@
+@@ -2,6 +2,7 @@
  from django.shortcuts import render_to_response as render
  from django.template import RequestContext
  from django.conf import settings
-+from django.contrib.auth.models import User
-+from django.contrib.auth import authenticate,login,logout
-+from django.core.urlresolvers import reverse
-+from django.utils.html import escape
-+from django.utils.translation import ugettext as _
++from django.utils.http import urlquote_plus, urlquote
  
  import md5, re, time, urllib
-+
-+
  from openid.consumer.consumer import Consumer, \
-     SUCCESS, CANCEL, FAILURE, SETUP_NEEDED
- from openid.consumer.discover import DiscoveryFailure
- from yadis import xri
+@@ -11,6 +12,8 @@
  
  from util import OpenID, DjangoOpenIDStore, from_openid_response
-+from forms import OpenidAuthForm, OpenidSigninForm, OpenidRegisterForm, OpenidVerifyForm
-+from models import UserAssociation
  
--from django.utils.html import escape
++from forms import OpenidSigninForm
++
+ from django.utils.html import escape
  
-+with_auth = getattr(settings, 'OPENID_WITH_AUTH', True)
-+
-+
  def get_url_host(request):
-     if request.is_secure():
-         protocol = 'https'
-@@ -30,7 +41,6 @@
-     return get_url_host(request) + request.get_full_path()
- 
- next_url_re = re.compile('^/[-\w/]+$')
--
- def is_valid_next_url(next):
-     # When we allow this:
-     #   /openid/?next=/welcome/
-@@ -38,71 +48,95 @@
-     # path, not a complete URL.
-     return bool(next_url_re.match(next))
- 
--def begin(request, sreg=None, extension_args=None, redirect_to=None, 
--        on_failure=None):
--    
-+def signin(request, sreg=None, extension_args=None,on_failure=None):
-     on_failure = on_failure or default_on_failure
-+    extension_args = extension_args or {}
-+    openid_url=None
-+    form_signin = OpenidSigninForm()
-+    form_auth = OpenidAuthForm()
-+    next=''
+@@ -42,67 +45,67 @@
+         on_failure=None):
      
+     on_failure = on_failure or default_on_failure
+-    
 -    if request.GET.get('logo'):
 -        # Makes for a better demo
 -        return logo(request)
-+    if with_auth and request.user.is_authenticated():
-+        if request.GET.get('next') and is_valid_next_url(request.GET['next']):
-+            next = request.GET.get('next', '').strip()
-+        if not next or not is_valid_next_url(next):
-+            next = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
-+        return HttpResponseRedirect(next)
-     
--    extension_args = extension_args or {}
+-    
+     extension_args = extension_args or {}
 -    if sreg:
 -        extension_args['sreg.optional'] = sreg
 -    trust_root = getattr(
@@ -79,19 +127,19 @@ Index: views.py
 -    # In case they were lazy...
 -    if not redirect_to.startswith('http://'):
 -        redirect_to =  get_url_host(request) + redirect_to
--    
+     
 -    if request.GET.get('next') and is_valid_next_url(request.GET['next']):
 -        if '?' in redirect_to:
 -            join = '&'
 -        else:
 -            join = '?'
 -        redirect_to += join + urllib.urlencode({
-+    request_path = request.path
++    next = ''
 +    if request.GET.get('next'):
-+        request_path += '?' + urllib.urlencode({
++        next = urllib.urlencode({
              'next': request.GET['next']
          })
-     
+-    
 -    user_url = request.POST.get('openid_url', None)
 -    if not user_url:
 -        request_path = request.path
@@ -99,88 +147,73 @@ Index: views.py
 -            request_path += '?' + urllib.urlencode({
 -                'next': request.GET['next']
 -            })
--        
+         
 -        return render('openid_signin.html', {
 -            'action': request_path,
 -            'logo': request.path + '?logo=1',
-+    if request.POST:   
-+        if 'bsignin' in request.POST.keys():
-+            form_signin = OpenidSigninForm(request.POST)
-+            if form_signin.is_valid():
-+                # first remove email and nickname from sreg if the are in to prevent dup
-+                if with_auth:
-+                    if sreg:
-+                        largs = sreg.split(',')
-+                        new_sreg=''
-+                        for arg in largs:
-+                            if arg!='nickname' or arg!='email':
-+                                    new_sreg=new_sreg+arg
-+                                    sreg=new_sreg
-+                    extension_args['sreg.optional'] = 'email,nickname'
+-        })
++  
++    form_signin = OpenidSigninForm(initial={'next':next})
++    if request.POST:
++        form_signin = OpenidSigninForm(request.POST)
++        if form_signin.is_valid():
++            consumer = Consumer(request.session, DjangoOpenIDStore())
++            try:
++                auth_request = consumer.begin(form_signin.cleaned_data['openid_url'])
++            except DiscoveryFailure:
++                return on_failure(request, "The OpenID was invalid")
 +
-+                trust_root = getattr(
++            if sreg:
++                extension_args['sreg.optional'] = sreg
++            
++            trust_root = getattr(
 +                    settings, 'OPENID_TRUST_ROOT', get_url_host(request) + '/'
 +                )
++        
++            redirect_to = redirect_to or getattr(
++                settings, 'OPENID_REDIRECT_TO',
++                # If not explicitly set, assume current URL with complete/ appended
++                get_full_url(request).split('?')[0] + 'complete/'
++            )
 +
-+                redirect_to = get_url_host(request) + reverse('django_openidconsumer.views.complete')
++            # TODO: add redirect_to in form 
++            if not redirect_to.startswith('http://'):
++                redirect_to =  get_url_host(request) + redirect_to
 +
-+                if request.GET.get('next') and is_valid_next_url(request.GET['next']):
-+                    redirect_to += "?" + urllib.urlencode({
-+                        'next': request.GET['next']
-+                    })
 +
-+                if sreg:
-+                    extension_args['sreg.optional'] += sreg
-+
-+                if xri.identifierScheme(form_signin.cleaned_data['openid_url']) == 'XRI' and getattr(
-+                    settings, 'OPENID_DISALLOW_INAMES', False
-+                    ):
-+                    return on_failure(request, _("i-names are not supported"))
-+
-+                consumer = Consumer(request.session, DjangoOpenIDStore())
-+                try:
-+                    auth_request = consumer.begin(form_signin.cleaned_data['openid_url'])
-+                except DiscoveryFailure:
-+                    return on_failure(request, _("The OpenID was invalid"))
-+
-+                # Add extension args (for things like simple registration)
-+                for name, value in extension_args.items():
-+                    namespace, key = name.split('.', 1)
-+                    auth_request.addExtensionArg(namespace, key, value)
-+
-+                redirect_url = auth_request.redirectURL(trust_root, redirect_to)
-+                return HttpResponseRedirect(redirect_url)
-+        elif 'blogin' in request.POST.keys():
-+            # perform normal django authentification
-+            form_auth = OpenidAuthForm(request.POST)
-+            if form_auth.is_valid():
-+                user = form_auth.get_user()
-+                login(request, user)
-+                if request.GET.get('next') and is_valid_next_url(request.GET['next']):
-+                    next = request.GET.get('next', '').strip()
-+                if not next or not is_valid_next_url(next):
-+                    next = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
-+                return HttpResponseRedirect(next)
-+
-+    return render('openid_signin.html', {
-+        'with_auth': with_auth,
-+        'form1': form_auth,
-+        'form2': form_signin,
-+        'action': request_path,
-+        'logo': request.path + 'logo/',
-         })
++            if 'next' in form_signin.cleaned_data and next != "":
++                if '?' in redirect_to:
++                    join = '&'
++                else:
++                    join = '?'
++                redirect_to += join + urllib.urlencode({
++                    'next': form_signin.cleaned_data['next']
++                })
      
 -    if xri.identifierScheme(user_url) == 'XRI' and getattr(
 -        settings, 'OPENID_DISALLOW_INAMES', False
 -        ):
 -        return on_failure(request, 'i-names are not supported')
--    
++            # Add extension args (for things like simple registration)
++            for name, value in extension_args.items():
++                namespace, key = name.split('.', 1)
++                auth_request.addExtensionArg(namespace, key, value)
+     
 -    consumer = Consumer(request.session, DjangoOpenIDStore())
 -    try:
 -        auth_request = consumer.begin(user_url)
 -    except DiscoveryFailure:
 -        return on_failure(request, "The OpenID was invalid")
--    
++            redirect_url = auth_request.redirectURL(trust_root, redirect_to)
++            return HttpResponseRedirect(redirect_url)
++
++    return render('openid_signin.html', {
++            'form': form_signin,
++            'action': request.path,
++            'logo': request.path + 'logo/',
++            'openids': request.session['openids'],
++        })
+     
 -    # Add extension args (for things like simple registration)
 -    for name, value in extension_args.items():
 -        namespace, key = name.split('.', 1)
@@ -189,165 +222,91 @@ Index: views.py
 -    redirect_url = auth_request.redirectURL(trust_root, redirect_to)
 -    return HttpResponseRedirect(redirect_url)
 -
-+        
  def complete(request, on_success=None, on_failure=None):
      on_success = on_success or default_on_success
      on_failure = on_failure or default_on_failure
-@@ -113,7 +147,7 @@
-     if openid_response.status == SUCCESS:
-         return on_success(request, openid_response.identity_url, openid_response)
-     elif openid_response.status == CANCEL:
--        return on_failure(request, 'The request was cancelled')
-+        return on_failure(request, _("The request was cancelled"))
-     elif openid_response.status == FAILURE:
-         return on_failure(request, openid_response.message)
-     elif openid_response.status == SETUP_NEEDED:
-@@ -129,24 +163,106 @@
-     request.session['openids'] = [
-         o for o in request.session['openids'] if o.openid != identity_url
-     ]
--    request.session['openids'].append(from_openid_response(openid_response))
-+    openid=from_openid_response(openid_response)
-+    request.session['openids'].append(openid)
-     
-+    if with_auth:
-+        try:
-+            rel = UserAssociation.objects.get(openid_url__exact=str(openid))
-+        except:
-+            # try to register this new user
-+            return register(request)
-+        user = rel.user
-+        if user.is_active:
-+            user.backend = "django.contrib.auth.backends.ModelBackend"
-+            login(request,user)
-+    
-     next = request.GET.get('next', '').strip()
-     if not next or not is_valid_next_url(next):
-         next = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
-     
-     return HttpResponseRedirect(next)
- 
-+def register(request):
-+    is_redirect = False
-+    next=''
-+    if request.GET.get('next'):
-+        next= "?" + urllib.urlencode({
-+            'next': request.GET['next']
-+        })
-+        
-+    openids = request.session.get('openids', [])
-+    if openids and len(openids)>0:
-+        openid = openids[-1] # Last authenticated OpenID
-+    else:
-+         return HttpResponseRedirect(reverse('django_openidconsumer.views.signin') + next)
-+
-+    
-+    nickname = openid.sreg.get('nickname', '')
-+    email = openid.sreg.get('email', '')
-+
-+    form1 = OpenidRegisterForm({
-+        'username': nickname,
-+        'email': email,
-+    }) 
-+    form2 = OpenidVerifyForm({
-+        'username': nickname,
-+    })
-+    
-+    if request.POST:
-+        if 'bnewaccount' in request.POST.keys():
-+            form1 = OpenidRegisterForm(request.POST)
-+            if form1.is_valid():
-+                is_redirect = True
-+                tmp_pwd = User.objects.make_random_password()
-+                user = User.objects.create_user(form1.cleaned_data['username'],form1.cleaned_data['email'], tmp_pwd)
-+                
-+                # make association with openid
-+                ua = UserAssociation(openid_url=str(openid),user_id=user.id)
-+                ua.save()
-+                # login 
-+                user.backend = "django.contrib.auth.backends.ModelBackend"
-+                login(request, user)
-+        elif 'bverify' in request.POST.keys():
-+            form2 = OpenidVerifyForm(request.POST)
-+            if form2.is_valid():
-+                is_redirect = True
-+                user = form2.get_user()
-+                ua = UserAssociation(openid_url=str(openid),user_id=user.id)
-+                ua.save()
-+                login(request, user)
-+        
-+        # redirect, can redirect only if forms are valid.
-+        if is_redirect:
-+            next = request.GET.get('next', '').strip()
-+            if not next or not is_valid_next_url(next):
-+                next = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
-+                return HttpResponseRedirect(next)
-+    
-+    
-+    
-+    return render('openid_complete.html', {
-+        'form1': form1,
-+        'form2': form2,
-+        'action': reverse('django_openidconsumer.views.register') + next,
-+        'nickname': nickname,
-+        'email': email,
-+        })
-+    
- def default_on_failure(request, message):
-     return render('openid_failure.html', {
-         'message': message
-     })
--
-+    
- def signout(request):
-     request.session['openids'] = []
-     next = request.GET.get('next', '/')
-     if not is_valid_next_url(next):
-         next = '/'
-+       
-+    if with_auth: 
-+        logout(request)
-+    
-     return HttpResponseRedirect(next)
- 
- def logo(request):
 Index: models.py
 ===================================================================
 --- models.py	(revision 19)
 +++ models.py	(working copy)
-@@ -1,9 +1,11 @@
+@@ -1,11 +1,14 @@
  from django.db import models
-+from django.contrib.auth.models import User
  
  class Nonce(models.Model):
-     nonce = models.CharField(maxlength=8)
-     expires = models.IntegerField()
+-    nonce = models.CharField(maxlength=8)
+-    expires = models.IntegerField()
 -    def __str__(self):
+-        return "Nonce: %s" % self.nonce
++    server_url = models.CharField(maxlength=255)
++    timestamp = models.IntegerField()
++    salt = models.CharField(max_length=40)
 +    
 +    def __unicode__(self):
-         return "Nonce: %s" % self.nonce
++        return u"Nonce: %s" % self.id
  
++    
  class Association(models.Model):
-@@ -13,5 +15,17 @@
+     server_url = models.TextField(maxlength=2047)
+     handle = models.CharField(maxlength=255)
+@@ -13,5 +16,7 @@
      issued = models.IntegerField()
      lifetime = models.IntegerField()
      assoc_type = models.TextField(maxlength=64)
 -    def __str__(self):
+-        return "Association: %s, %s" % (self.server_url, self.handle)
 +    
 +    def __unicode__(self):
-         return "Association: %s, %s" % (self.server_url, self.handle)
++        return u"Association: %s, %s" % (self.server_url, self.handle)
 +
+Index: urls.py
+===================================================================
+--- urls.py	(revision 0)
++++ urls.py	(revision 0)
+@@ -0,0 +1,10 @@
++from django.conf.urls.defaults import patterns
 +
-+class UserAssociation(models.Model):
-+    openid_url = models.CharField(blank=False, maxlength=255)
-+    user = models.ForeignKey(User,unique=True)
++urlpatterns = patterns('',
++    (r'^$', 'django_openidconsumer.views.begin'),
++    (r'^logo/$', 'django_openidconsumer.views.logo'),
++    (r'^signout/$', 'django_openidconsumer.views.signout'),
++    (r'^complete/$', 'django_openidconsumer.views.complete'),
++
 +    
-+    def __unicode__(self):
-+        return "Openid %s with user %s" % (self.openid_url, self.user)
-+        
-+    class Admin:
-+        pass
-\ No newline at end of file
++)
+Index: forms.py
+===================================================================
+--- forms.py	(revision 0)
++++ forms.py	(revision 0)
+@@ -0,0 +1,29 @@
++from django import newforms as forms
++from django.utils.translation import ugettext as _
++from django.conf import settings
++
++from yadis import xri
++
++import re
++
++class OpenidSigninForm(forms.Form):
++    openid_url = forms.CharField(max_length=255, widget=forms.widgets.TextInput(attrs={'class': 'required openid'}))
++    next = forms.CharField(max_length=255,widget=forms.HiddenInput(), required=False)
++
++    def clean_openid_url(self):
++        if 'openid_url' in self.cleaned_data:
++            openid_url = self.cleaned_data['openid_url']
++            if xri.identifierScheme(openid_url) == 'XRI' and getattr(
++                settings, 'OPENID_DISALLOW_INAMES', False
++                ):
++                raise forms.ValidationError(_('i-names are not supported'))
++            return self.cleaned_data['openid_url']
++
++    def clean_next(self):
++        if 'next' in self.cleaned_data and self.cleaned_data['next'] != "":
++            next_url_re = re.compile('^/[-\w/]+$')
++            if not next_url_re.match(self.cleaned_data['next']):
++                raise forms.ValidationError(_('next url "%s" is invalid' % self.cleaned_data['next']))
++            return self.cleaned_data['next']
++
++
 Index: templates/openid_signin.html
 ===================================================================
 --- templates/openid_signin.html	(revision 19)
@@ -358,43 +317,33 @@ Index: templates/openid_signin.html
  <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
    "http://www.w3.org/TR/html4/strict.dtd">
  <html>
-@@ -2,5 +4,5 @@
- <head>
--<title>Sign in with your OpenID</title>
-+<title>{% trans "Sign in" %}</title>
- <style type="text/css">
--input.openid {
-+#id_openid_url {
-   background: url({{ logo }}) no-repeat; 
-@@ -12,11 +14,28 @@
- </style>
+@@ -13,10 +15,24 @@
  </head>
  <body>
--<h1>Sign in with your OpenID</h1>
- 
+ <h1>Sign in with your OpenID</h1>
+-
 -<form action="{{ action }}" method="post">
 -<p><input class="openid" type="text" name="openid_url"> <input type="submit" value="Sign in"></p>
-+<h1></h1>
-+{{ form1.errors }}
-+{{ form2.errors }}
-+{% if with_auth %}
-+<form name="fauth" action="{{ action }}" method="post">
-+	<fieldset>
-+		<legend>{% trans "Sign using your Django account" %}</legend>
-+		<div><label for="id_username">{% trans "Username:" %}</label> {{ form1.username }}</div>
-+		<div><label for="id_password">{% trans "Password" %}</label>{{ form1.password }}</div>
-+		<div><input type="submit" name="blogin" value="Sign in"></div>
-+	</fieldset>	
- </form>
+-</form>
+-
++{% if form.errors %}
++<p class="errors">{% trans "Please correct errors below:" %}<br />
++	{% if form.openid_url.errors %} 
++		<span class="error">{{ form.openid_url.errors|join:", " }}</span>
++	{% endif %}
++	{% if form.next.errors %} 
++		<span class="error">{{ form.next.errors|join:", " }}</span>
++	{% endif %}
++</p>
 +{% endif %}
- 
 +<form name="fopenid" action="{{ action }}" method="post">
++    {{ form.next }}
 +	<fieldset>
-+		<legend>{% trans "Sign In Using Your OPENID" %}</legend>
-+	<div><label for="id_openid_ul">OpenId URL</label>{{ form2.openid_url }}</div>
-+	<div><input name="bsignin" type="submit" value="Sign in with OPENID"></div>
++		<legend>{% trans "Sign In Using Your OpenID" %}</legend>
++        <div class="form-row"><label for="id_openid_ul">{% trans "OpenId URL :" %}</label><br />{{ form.openid_url }}</div>     
++        <div class="submit-row "><input name="bsignin" type="submit" value="{% trans "Sign in with OPENID" %}"></div>
++		
 +	</fieldset>
-+</form>
-+
++</form>	
  </body>
  </html>
