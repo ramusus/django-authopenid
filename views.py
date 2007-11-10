@@ -15,7 +15,7 @@
 
 
 from django.http import HttpResponse, HttpResponseRedirect, get_host
-from django.shortcuts import render_to_response as render
+from django.shortcuts import get_object_or_404, render_to_response as render
 from django.template import RequestContext, loader, Context
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -40,6 +40,35 @@ from django_openidconsumer.forms import OpenidSigninForm
 from models import UserAssociation, UserPasswordQueue
 from forms import OpenidAuthForm, OpenidRegisterForm, OpenidVerifyForm, RegistrationForm, ChangepwForm, ChangeemailForm, ChangeopenidForm, DeleteForm, EmailPasswordForm
 from decorators import username_test
+
+def ask_openid(request, openid_url, redirect_to, on_failure=None, extension_args=None):
+    """ basic function to ask openid and return response """
+
+    on_failure = on_failure or signin_failure
+    extension_args = extension_args or {}
+
+    trust_root = getattr(
+        settings, 'OPENID_TRUST_ROOT', get_url_host(request) + '/'
+    )
+    if xri.identifierScheme(openid_url) == 'XRI' and getattr(
+            settings, 'OPENID_DISALLOW_INAMES', False
+    ):
+        msg = _("i-names are not supported")
+        return on_failure(request,msg)
+    consumer = Consumer(request.session, DjangoOpenIDStore())
+    try:
+        auth_request = consumer.begin(openid_url)
+    except DiscoveryFailure:
+        msg =_("The OpenID %s was invalid" % openid_url)
+        return on_failure(request,msg)
+
+    # Add extension args (for things like simple registration)
+    for name, value in extension_args.items():
+        namespace, key = name.split('.', 1)
+        auth_request.addExtensionArg(namespace, key, value)
+    redirect_url = auth_request.redirectURL(trust_root, redirect_to)
+    return HttpResponseRedirect(redirect_url)
+
 
 
 def signin(request):
@@ -78,26 +107,16 @@ def signin(request):
                     next = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
 
                 extension_args['sreg.optional'] = 'email,nickname'
+                redirect_to = "%s?next=%s" % (
+                        get_url_host(request) + reverse('django_authopenid.views.complete_signin'), 
+                        urllib.urlencode({'next':next}))
 
-                trust_root = getattr(
-                    settings, 'OPENID_TRUST_ROOT', get_url_host(request) + '/'
-                )
+                return ask_openid(request, 
+                        form_signin.cleaned_data['openid_url'], 
+                        redirect_to, 
+                        on_failure=signin_failure, 
+                        extension_args=extension_args)
 
-                redirect_to = "%s?next=%s" % (get_url_host(request) + reverse('django_authopenid.views.complete_signin'), urllib.urlencode({'next':next}))
-
-                consumer = Consumer(request.session, DjangoOpenIDStore())
-                try:
-                    auth_request = consumer.begin(form_signin.cleaned_data['openid_url'])
-                except DiscoveryFailure:
-                    return on_failure(request, _("The OpenID %s was invalid") % form_signin.cleaned_data['openid_url'])
-
-                # Add extension args (for things like simple registration)
-                for name, value in extension_args.items():
-                    namespace, key = name.split('.', 1)
-                    auth_request.addExtensionArg(namespace, key, value)
-
-                redirect_url = auth_request.redirectURL(trust_root, redirect_to)
-                return HttpResponseRedirect(redirect_url)
         elif 'blogin' in request.POST.keys():
             # perform normal django authentification
             form_auth = OpenidAuthForm(request.POST)
@@ -373,11 +392,8 @@ def changepw(request,username):
     template: account/changepw.html
     """
     
-    try:
-        u=User.objects.get(username=username)
-    except:
-        raise Http404
-
+    u = get_object_or_404(User, username=username)
+    
     if request.POST:
         form = ChangepwForm(request.POST)
         if form.is_valid():
@@ -395,35 +411,6 @@ def changepw(request,username):
 changepw = username_test(changepw, 'django_authopenid.views.changepw')
 
 
-def ask_openid(request, openid_url, redirect_to, on_failure=None, extension_args=None):
-    """ basic function to ask openid and return response """
-
-    on_failure = on_failure or signin_failure
-    extension_args = extension_args or {}
-
-    trust_root = getattr(
-        settings, 'OPENID_TRUST_ROOT', get_url_host(request) + '/'
-    )
-    if xri.identifierScheme(openid_url) == 'XRI' and getattr(
-            settings, 'OPENID_DISALLOW_INAMES', False
-    ):
-        msg = _("i-names are not supported")
-        return on_failure(request,msg)
-    consumer = Consumer(request.session, DjangoOpenIDStore())
-    try:
-        auth_request = consumer.begin(openid_url)
-    except DiscoveryFailure:
-        msg =_("The OpenID %s was invalid" % openid_url)
-        return on_failure(request,msg)
-
-    # Add extension args (for things like simple registration)
-    for name, value in extension_args.items():
-        namespace, key = name.split('.', 1)
-        auth_request.addExtensionArg(namespace, key, value)
-    redirect_url = auth_request.redirectURL(trust_root, redirect_to)
-    return HttpResponseRedirect(redirect_url)
-
-
 def changeemail(request,username):
     """ 
     changeemail view. It require password or openid to allow change.
@@ -435,11 +422,8 @@ def changeemail(request,username):
 
     extension_args = {}
  
-    try:
-        u=User.objects.get(username=username)
-    except:
-        raise Http404
-     
+    u = get_object_or_404(User, username=username) 
+    
     if request.POST:
         form = ChangeemailForm(request.POST)
         if form.is_valid():
@@ -512,11 +496,8 @@ def changeopenid(request, username):
     has_openid=True
     msg = request.GET.get('msg', '')
         
-    try:
-        u=User.objects.get(username=username)
-    except:
-        raise Http404
-        
+    u = get_object_or_404(User, username=username)
+
     try:
         uopenid=UserAssociation.objects.get(user=u)
         openid_url = uopenid.openid_url
@@ -580,10 +561,8 @@ def delete(request,username):
     """
 
     extension_args={}
-    try:
-        u=User.objects.get(username=username)
-    except:
-        raise Http404
+    
+    u = get_object_or_404(User, username=username)
 
     if request.POST:
         form = DeleteForm(request.POST)
