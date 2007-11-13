@@ -2,23 +2,29 @@ Index: util.py
 ===================================================================
 --- util.py	(revision 19)
 +++ util.py	(working copy)
-@@ -1,10 +1,13 @@
+@@ -1,10 +1,18 @@
  from openid.store.interface import OpenIDStore
  from openid.association import Association as OIDAssociation
+-from yadis import xri
 +from django.db.models.query import Q
 +from django.conf import settings
-+
-+import openid.store
- from yadis import xri
  
 -import time, base64, md5
-+import time, base64, md5, operator
++import openid.store
  
 -from django.conf import settings
++# needed for some linux distributions like debian
++try:
++    from openid.yadis import xri
++except:
++    from yadis import xri
++
++import time, base64, md5, operator
++
  from models import Association, Nonce
  
  class OpenID:
-@@ -70,27 +73,37 @@
+@@ -70,27 +78,37 @@
          for assoc in assocs:
              assoc.delete()
          return assocs_exist
@@ -74,7 +80,7 @@ Index: util.py
      def getAuthKey(self):
          # Use first AUTH_KEY_LEN characters of md5 hash of SECRET_KEY
          return md5.new(settings.SECRET_KEY).hexdigest()[:self.AUTH_KEY_LEN]
-@@ -101,6 +114,6 @@
+@@ -101,6 +119,6 @@
  def from_openid_response(openid_response):
      issued = int(time.time())
      return OpenID(
@@ -87,7 +93,7 @@ Index: views.py
 ===================================================================
 --- views.py	(revision 19)
 +++ views.py	(working copy)
-@@ -2,6 +2,7 @@
+@@ -2,15 +2,24 @@
  from django.shortcuts import render_to_response as render
  from django.template import RequestContext
  from django.conf import settings
@@ -95,8 +101,17 @@ Index: views.py
  
  import md5, re, time, urllib
  from openid.consumer.consumer import Consumer, \
-@@ -11,6 +12,8 @@
+     SUCCESS, CANCEL, FAILURE, SETUP_NEEDED
+ from openid.consumer.discover import DiscoveryFailure
+-from yadis import xri
  
++# needed for some linux distributions like debian
++try:
++    from openid.yadis import xri
++except:
++    from yadis import xriœ
++
++
  from util import OpenID, DjangoOpenIDStore, from_openid_response
  
 +from forms import OpenidSigninForm
@@ -104,7 +119,7 @@ Index: views.py
  from django.utils.html import escape
  
  def get_url_host(request):
-@@ -42,67 +45,67 @@
+@@ -42,67 +51,67 @@
          on_failure=None):
      
      on_failure = on_failure or default_on_failure
@@ -277,12 +292,16 @@ Index: forms.py
 ===================================================================
 --- forms.py	(revision 0)
 +++ forms.py	(revision 0)
-@@ -0,0 +1,29 @@
+@@ -0,0 +1,33 @@
 +from django import newforms as forms
 +from django.utils.translation import ugettext as _
 +from django.conf import settings
 +
-+from yadis import xri
++# needed for some linux distributions like debian
++try:
++    from openid.yadis import xri
++except:
++    from yadis import xri
 +
 +import re
 +

@@ -1,22 +1,22 @@
 from django.conf.urls.defaults import patterns
 
-urlpatterns = patterns('',
+urlpatterns = patterns('django_authopenid.views',
      # manage account registration
-    (r'^signin/$', 'django_authopenid.views.signin'),
-    (r'^signout/$', 'django_authopenid.views.signout'),
-    (r'^complete/$', 'django_authopenid.views.complete_signin'),
-    (r'^register/$', 'django_authopenid.views.register'),
-    (r'^signup/$', 'django_authopenid.views.signup'),
-    (r'^signup/$', 'django_authopenid.views.signup'),
-    ('^sendpw/$', 'django_authopenid.views.sendpw'),
+    url(r'^%s$' % _('signin/'), 'signin', name='user_signin'),
+    url(r'^%s$' % _('signout/'), 'signout', name='user_signout'),
+    url(r'^%s%s$' % (_('signin/'), _('complete/')), 'complete_signin', name='user_complete_signin'),
+    url(r'^%s$' % _('register/'), 'register', name='user_register'),
+    url(r'^%s$' % _('signup/'), 'signup', name='user_signup'),
+    url(r'^%s$' % _('password/'), 'sendpw', name='user_sendpw'),
+    url(r'^%s%s$' % (_('password/'), _('confirm/')), 'confirmchangepw', name='user_confirmchangepw'),
 
     # manage account settings
-    (r'^(?P<username>\w+)/$', 'django_authopenid.views.account_settings'),
-    (r'^$', 'django_authopenid.views.account_settings'),
-    (r'^(?P<username>\w+)/changepw/$', 'django_authopenid.views.changepw'),
-    (r'^(?P<username>\w+)/changeemail/$', 'django_authopenid.views.changeemail'),
-    (r'^(?P<username>\w+)/changeopenid/$', 'django_authopenid.views.changeopenid'),
-    (r'^(?P<username>\w+)/delete/$', 'django_authopenid.views.delete'),
-    (r'^sendpw/confirm/$', 'django_authopenid.views.confirmchangepw'),
-
+    url(r'^(?P<username>\w+)/$', 'account_settings', name='user_account_settings'),
+    url(r'^$', 'account_settings', name='user_account_settings'),
+    url(r'^(?P<username>\w+)/%s$' % _('password/'), 'changepw', name='user_changepw'),
+    url(r'^(?P<username>\w+)/%s$' % _('email/'), 'changeemail', name='user_changeemail'),
+    url(r'^(?P<username>\w+)/%s$' % _('openid/'), 'changeopenid', name='user_changeopenid'),
+    url(r'^(?P<username>\w+)/%s$' % _('delete/'), 'delete', name='user_delete'),
+    
+    
 )
