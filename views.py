@@ -20,6 +20,7 @@ from django.template import RequestContext, loader, Context
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate,login,logout
+from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
 from django.utils.html import escape
 from django.utils.translation import ugettext as _
@@ -29,7 +30,13 @@ from django.utils.http import urlquote_plus, urlquote
 
 from openid.consumer.consumer import Consumer
 from openid.consumer.discover import DiscoveryFailure
-from yadis import xri
+
+
+# needed for some linux distributions like debian
+try:
+    from openid.yadis import xri
+except:
+    from yadis import xri
 
 import urllib
 
@@ -108,7 +115,7 @@ def signin(request):
 
                 extension_args['sreg.optional'] = 'email,nickname'
                 redirect_to = "%s?next=%s" % (
-                        get_url_host(request) + reverse('django_authopenid.views.complete_signin'), 
+                        get_url_host(request) + reverse('user_complete_signin'), 
                         urllib.urlencode({'next':next}))
 
                 return ask_openid(request, 
@@ -135,7 +142,7 @@ def signin(request):
         'form2': form_signin,
         'action': request.path,
         'msg':  request.GET.get('msg',''),
-        'sendpw_url': reverse('django_authopenid.views.sendpw'),
+        'sendpw_url': reverse('user_sendpw'),
     })
 
 def complete_signin(request):
@@ -208,7 +215,7 @@ def register(request):
     if openids and len(openids)>0:
         openid = openids[-1] # Last authenticated OpenID
     else:
-         return HttpResponseRedirect(reverse('django_authopenid.views.signin') + next)
+         return HttpResponseRedirect(reverse('user_signin') + next)
 
     nickname = openid.sreg.get('nickname', '')
     email = openid.sreg.get('email', '')
@@ -264,7 +271,7 @@ def register(request):
     return render('authopenid/complete.html', {
         'form1': form1,
         'form2': form2,
-        'action': reverse('django_authopenid.views.register'),
+        'action': reverse('user_register'),
         'nickname': nickname,
         'email': email
     }, context_instance=RequestContext(request))
@@ -275,7 +282,7 @@ def signin_failure(request, message):
 
     template : "authopenid/openid.html"
     """
-    request_path=reverse('friendsnippets.django_authopenid.views.signin')
+    request_path=reverse('user_signin')
     if request.GET.get('next'):
         request_path += '?' + urllib.urlencode({
             'next': request.GET['next']
@@ -299,7 +306,7 @@ def signup(request):
 
     templates: authopenid/signup.html, authopenid/confirm_email.txt
     """
-    action_signin = reverse('django_authopenid.views.signin')
+    action_signin = reverse('user_signin')
 
     next = request.GET.get('next', '/')
     form = RegistrationForm(initial={'next':next})
@@ -339,7 +346,7 @@ def signup(request):
         'action_signin': action_signin,
         },context_instance=RequestContext(request))
 
-    
+@login_required   
 def signout(request):
     """
     signout from the website. Remove openid from session and kill it.
@@ -356,7 +363,8 @@ def signout(request):
     return HttpResponseRedirect(next)
 
 
-
+@login_required
+@username_control ('user_account_settings')
 def account_settings(request,username=None):
     """
     index pages to changes some basic account settings :
@@ -381,9 +389,9 @@ def account_settings(request,username=None):
     return render('account/settings.html',
             {'msg': msg, 'settings_path': request.path, 'is_openid': is_openid},
             context_instance=RequestContext(request))
-account_settings = username_test(account_settings, 'django_authopenid.views.account_settings')
 
-
+@login_required
+@username_control('user_changepw')
 def changepw(request,username):
     """
     change password view.
@@ -400,7 +408,7 @@ def changepw(request,username):
             u.set_password(form.cleaned_data['password1'])
             u.save()
             msg=_("Password changed.") 
-            redirect="%s?msg=%s" % (reverse('django_authopenid.views.account_settings',kwargs={'username': request.user.username}),urlquote_plus(msg))
+            redirect="%s?msg=%s" % (reverse('user_account_settings',kwargs={'username': request.user.username}),urlquote_plus(msg))
             return HttpResponseRedirect(redirect)
     else:
         form=ChangepwForm(initial={'username':request.user.username})
@@ -408,9 +416,9 @@ def changepw(request,username):
     return render('account/changepw.html', {'form': form },
                                 context_instance=RequestContext(request))
 
-changepw = username_test(changepw, 'django_authopenid.views.changepw')
 
-
+@login_required
+@username_control('user_changeemail')
 def changeemail(request,username):
     """ 
     changeemail view. It require password or openid to allow change.
@@ -431,10 +439,10 @@ def changeemail(request,username):
                 u.email = form.cleaned_data['email']
                 u.save()
                 msg=_("Email changed.") 
-                redirect="%s?msg=%s" % (reverse('django_authopenid.views.account_settings', kwargs={'username': request.user.username}),urlquote_plus(msg))
+                redirect="%s?msg=%s" % (reverse('user_account_settings', kwargs={'username': request.user.username}),urlquote_plus(msg))
                 return HttpResponseRedirect(redirect)
             else:
-                redirect_to = "%s?new_email=%s" % (get_url_host(request) + reverse('django_authopenid.views.changeemail',kwargs={'username':username}),form.cleaned_data['email'])
+                redirect_to = "%s?new_email=%s" % (get_url_host(request) + reverse('user_changeemail',kwargs={'username':username}),form.cleaned_data['email'])
                 
                 return ask_openid(request, form.cleaned_data['password'], redirect_to, on_failure=emailopenid_failure)    
     elif not request.POST and 'openid.mode' in request.GET:
@@ -447,7 +455,6 @@ def changeemail(request,username):
     
     return render('account/changeemail.html', 
             {'form': form }, context_instance=RequestContext(request))
-changeemail = username_test(changeemail, 'django_authopenid.views.changeemail')
 
 def emailopenid_success(request, identity_url, openid_response):
     openid=from_openid_response(openid_response)
@@ -471,17 +478,18 @@ def emailopenid_success(request, identity_url, openid_response):
         u.save()
     msg=_("Email Changed.")
 
-    redirect="%s?msg=%s" % (reverse('django_authopenid.views.account_settings',kwargs={'username': request.user.username}),urlquote_plus(msg))
+    redirect="%s?msg=%s" % (reverse('user_account_settings',kwargs={'username': request.user.username}),urlquote_plus(msg))
     return HttpResponseRedirect(redirect)
     
 
 def emailopenid_failure(request, message):
-    redirect_to="%s?msg=%s" % (reverse('django_authopenid.views.changeemail',kwargs={'username':request.user.username}), urlquote_plus(message))
+    redirect_to="%s?msg=%s" % (reverse('user_changeemail',kwargs={'username':request.user.username}), urlquote_plus(message))
 
     return HttpResponseRedirect(redirect_to)
  
 
-
+@login_required
+@username_control('user_changeopenid')
 def changeopenid(request, username):
     """
     change openid view. Allow user to change openid associated to its username.
@@ -507,7 +515,7 @@ def changeopenid(request, username):
     if request.POST and has_openid:
         form=ChangeopenidForm(request.POST)
         if form.is_valid():
-            redirect_to = get_url_host(request) + reverse('django_authopenid.views.changeopenid',kwargs={'username':username})
+            redirect_to = get_url_host(request) + reverse('user_changeopenid',kwargs={'username':username})
             return ask_openid(request, form.cleaned_data['openid_url'], redirect_to, on_failure=changeopenid_failure)
     elif not request.POST and has_openid:
         if 'openid.mode' in request.GET:
@@ -517,7 +525,6 @@ def changeopenid(request, username):
     return render('account/changeopenid.html', {'form': form,
         'has_openid': has_openid, 'msg': msg }, context_instance=RequestContext(request))
 
-changeopenid = username_test(changeopenid, 'django_authopenid.views.changeopenid')
 
 def changeopenid_success(request, identity_url, openid_response):
     openid=from_openid_response(openid_response)
@@ -542,14 +549,16 @@ def changeopenid_success(request, identity_url, openid_response):
     request.session['openids'].append(openid)
 
     msg=_("Openid %s associated with your account." % identity_url) 
-    redirect="%s?msg=%s" % (reverse('django_authopenid.views.account_settings', kwargs={'username':request.user.username}), urlquote_plus(msg))
+    redirect="%s?msg=%s" % (reverse('user_account_settings', kwargs={'username':request.user.username}), urlquote_plus(msg))
     return HttpResponseRedirect(redirect)
     
 
 def changeopenid_failure(request, message):
-    redirect_to="%s?msg=%s" % (reverse('django_authopenid.views.changeopenid',kwargs={'username':request.user.username}), urlquote_plus(message))
+    redirect_to="%s?msg=%s" % (reverse('user_changeopenid',kwargs={'username':request.user.username}), urlquote_plus(message))
     return HttpResponseRedirect(redirect_to)
-    
+
+@login_required
+@username_control('user_delete')
 def delete(request,username):
     """
     delete view. Allow user to delete its account. Password/openid are required to 
@@ -569,10 +578,9 @@ def delete(request,username):
         if form.is_valid():
             if not form.test_openid:
                 u.delete()
-                from friendsnippets.django_openidconsumer.views import signout
                 return signout(request)
             else:
-                redirect_to = get_url_host(request) + reverse('django_authopenid.views.delete',kwargs={'username':username})
+                redirect_to = get_url_host(request) + reverse('user_delete',kwargs={'username':username})
                 return ask_openid(request, form.cleaned_data['password'], redirect_to, on_failure=deleteopenid_failure)
     elif not request.POST and 'openid.mode' in request.GET:
         return complete(request, deleteopenid_success, deleteopenid_failure) 
@@ -583,7 +591,6 @@ def delete(request,username):
     return render('account/delete.html', {'form': form, 'msg': msg, },
                                         context_instance=RequestContext(request))
 
-delete = username_test(delete, 'django_authopenid.views.delete')
 
 def deleteopenid_success(request, identity_url, openid_response):
     openid=from_openid_response(openid_response)
@@ -610,7 +617,7 @@ def deleteopenid_success(request, identity_url, openid_response):
     
 
 def deleteopenid_failure(request, message):
-    redirect_to="%s?msg=%s" % (reverse('django_authopenid.views.delete',kwargs={'username':request.user.username}), urlquote_plus(message))
+    redirect_to="%s?msg=%s" % (reverse('user_delete',kwargs={'username':request.user.username}), urlquote_plus(message))
 
     return HttpResponseRedirect(redirect_to)
 
@@ -648,7 +655,7 @@ def sendpw(request):
                 'confirm_key': confirm_key,
                 'username': form.user_cache.username,
                 'password': new_pw,
-                'url_confirm': reverse('django_authopenid.views.confirmchangepw'),
+                'url_confirm': reverse('user_confirmchangepw'),
             })
             message = message_template.render(message_context)
             send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [form.user_cache.email])
@@ -682,21 +689,21 @@ def confirmchangepw(request):
         q = UserPasswordQueue.objects.get(confirm_key__exact=confirm_key)
     except:
         msg=_("Can not change password. Confirmation key '%s' isn't registered." % confirm_key) 
-        redirect="%s?msg=%s" % (reverse('django_authopenid.views.sendpw'),urlquote_plus(msg))
+        redirect="%s?msg=%s" % (reverse('user_sendpw'),urlquote_plus(msg))
         return HttpResponseRedirect(redirect)
 
     try:
         user = User.objects.get(id=q.user.id)
     except:
         msg=_("Can not change password. User don't exist anymore in our database.") 
-        redirect="%s?msg=%s" % (reverse('django_authopenid.views.sendpw'),urlquote_plus(msg))
+        redirect="%s?msg=%s" % (reverse('user_sendpw'),urlquote_plus(msg))
         return HttpResponseRedirect(redirect)
 
     user.set_password(q.new_password)
     user.save()
     q.delete()
     msg=_("Password changed for %s. You could now sign-in" % user.username) 
-    redirect="%s?msg=%s" % (reverse('django_authopenid.views.signin'), 
+    redirect="%s?msg=%s" % (reverse('user_signin'), 
                                         urlquote_plus(msg))
 
     return HttpResponseRedirect(redirect)
