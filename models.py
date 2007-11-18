@@ -1,23 +1,29 @@
-"""
- Copyright 2007 Benoît Chesneau 
- Licensed under the Apache License, Version 2.0 (the "License"); 
- you may not use this file except in compliance with the License. 
- You may obtain a copy of the License at
-
- http://www.apache.org/licenses/LICENSE-2.0 
- 
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
-
+# -*- coding: utf-8 -*-
 from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
 
 import md5, random, sys, os, time
+
+class Nonce(models.Model):
+    server_url = models.CharField(maxlength=255)
+    timestamp = models.IntegerField()
+    salt = models.CharField(max_length=40)
+    
+    def __unicode__(self):
+        return u"Nonce: %s" % self.id
+
+    
+class Association(models.Model):
+    server_url = models.TextField(maxlength=2047)
+    handle = models.CharField(maxlength=255)
+    secret = models.TextField(maxlength=255) # Stored base64 encoded
+    issued = models.IntegerField()
+    lifetime = models.IntegerField()
+    assoc_type = models.TextField(maxlength=64)
+    
+    def __unicode__(self):
+        return u"Association: %s, %s" % (self.server_url, self.handle)
 
 class UserAssociation(models.Model):
     """ 

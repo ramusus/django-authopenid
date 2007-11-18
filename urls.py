@@ -1,4 +1,6 @@
-from django.conf.urls.defaults import patterns
+# -*- coding: utf-8 -*-
+from django.conf.urls.defaults import patterns, url
+from django.utils.translation import ugettext as _
 
 urlpatterns = patterns('django_authopenid.views',
      # manage account registration
