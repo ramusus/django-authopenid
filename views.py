@@ -1,16 +1,28 @@
+# -*- coding: utf-8 -*-
 """
- Copyright 2007 Benoît Chesneau 
- Licensed under the Apache License, Version 2.0 (the "License"); 
- you may not use this file except in compliance with the License. 
- You may obtain a copy of the License at
+ Copyright (c) 2007, Benoît Chesneau
+ Copyright (c) 2007, Simon Willison, original work on django-openid
 
- http://www.apache.org/licenses/LICENSE-2.0 
- 
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
+ All rights reserved.
+
+ Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+     * Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+     * Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+     * Neither the name of the <ORGANIZATION> nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 """
 
 
@@ -28,9 +40,9 @@ from django.contrib.sites.models import Site
 from django.utils.encoding import smart_str
 from django.utils.http import urlquote_plus, urlquote
 
-from openid.consumer.consumer import Consumer
+from openid.consumer.consumer import Consumer, \
+    SUCCESS, CANCEL, FAILURE, SETUP_NEEDED
 from openid.consumer.discover import DiscoveryFailure
-
 
 # needed for some linux distributions like debian
 try:
@@ -38,15 +50,41 @@ try:
 except:
     from yadis import xri
 
-import urllib
+import md5, re, time, urllib
 
-from django_openidconsumer.util import OpenID, DjangoOpenIDStore, from_openid_response
-from django_openidconsumer.views import complete, is_valid_next_url, get_url_host
-from django_openidconsumer.forms import OpenidSigninForm
 
+from util import OpenID, DjangoOpenIDStore, from_openid_response
 from models import UserAssociation, UserPasswordQueue
-from forms import OpenidAuthForm, OpenidRegisterForm, OpenidVerifyForm, RegistrationForm, ChangepwForm, ChangeemailForm, ChangeopenidForm, DeleteForm, EmailPasswordForm
-from decorators import username_test
+from forms import OpenidSigninForm, OpenidAuthForm, OpenidRegisterForm, \
+        OpenidVerifyForm, RegistrationForm, ChangepwForm, ChangeemailForm, \
+        ChangeopenidForm, DeleteForm, EmailPasswordForm
+
+from decorators import username_control
+
+def get_url_host(request):
+    if request.is_secure():
+        protocol = 'https'
+    else:
+        protocol = 'http'
+    host = escape(get_host(request))
+    return '%s://%s' % (protocol, host)
+
+def get_full_url(request):
+    if request.is_secure():
+        protocol = 'https'
+    else:
+        protocol = 'http'
+    host = escape(request.META['HTTP_HOST'])
+    return get_url_host(request) + request.get_full_path()
+
+next_url_re = re.compile('^/[-\w/]+$')
+
+def is_valid_next_url(next):
+    # When we allow this:
+    #   /openid/?next=/welcome/
+    # For security reasons we want to restrict the next= bit to being a local 
+    # path, not a complete URL.
+    return bool(next_url_re.match(next))
 
 def ask_openid(request, openid_url, redirect_to, on_failure=None, extension_args=None):
     """ basic function to ask openid and return response """
@@ -76,6 +114,44 @@ def ask_openid(request, openid_url, redirect_to, on_failure=None, extension_args
     redirect_url = auth_request.redirectURL(trust_root, redirect_to)
     return HttpResponseRedirect(redirect_url)
 
+def complete(request, on_success=None, on_failure=None):
+    on_success = on_success or default_on_success
+    on_failure = on_failure or default_on_failure
+    
+    consumer = Consumer(request.session, DjangoOpenIDStore())
+    openid_response = consumer.complete(dict(request.GET.items()))
+    
+    if openid_response.status == SUCCESS:
+        return on_success(request, openid_response.identity_url, openid_response)
+    elif openid_response.status == CANCEL:
+        return on_failure(request, 'The request was cancelled')
+    elif openid_response.status == FAILURE:
+        return on_failure(request, openid_response.message)
+    elif openid_response.status == SETUP_NEEDED:
+        return on_failure(request, 'Setup needed')
+    else:
+        assert False, "Bad openid status: %s" % openid_response.status
+
+def default_on_success(request, identity_url, openid_response):
+    if 'openids' not in request.session.keys():
+        request.session['openids'] = []
+    
+    # Eliminate any duplicates
+    request.session['openids'] = [
+        o for o in request.session['openids'] if o.openid != identity_url
+    ]
+    request.session['openids'].append(from_openid_response(openid_response))
+    
+    next = request.GET.get('next', '').strip()
+    if not next or not is_valid_next_url(next):
+        next = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
+    
+    return HttpResponseRedirect(next)
+
+def default_on_failure(request, message):
+    return render('openid_failure.html', {
+        'message': message
+    })
 
 
 def signin(request):
@@ -128,8 +204,8 @@ def signin(request):
             # perform normal django authentification
             form_auth = OpenidAuthForm(request.POST)
             if form_auth.is_valid():
-                user = form_auth.get_user()
-                login(request, user)
+                u = form_auth.get_user()
+                login(request, u)
 
                 next = form_auth.cleaned_data['next']
                 if not next:
@@ -170,10 +246,10 @@ def signin_success(request, identity_url, openid_response):
     except:
         # try to register this new user
         return register(request)
-    user = rel.user
-    if user.is_active:
-        user.backend = "django.contrib.auth.backends.ModelBackend"
-        login(request,user)
+    u = rel.user
+    if u.is_active:
+        u.backend = "django.contrib.auth.backends.ModelBackend"
+        login(request,u)
 
     next = request.GET.get('next', '').strip()
     if not next or not is_valid_next_url(next):
@@ -240,15 +316,15 @@ def register(request):
                     next = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
                 is_redirect = True
                 tmp_pwd = User.objects.make_random_password()
-                user = User.objects.create_user(form1.cleaned_data['username'],form1.cleaned_data['email'], tmp_pwd)
+                u = User.objects.create_user(form1.cleaned_data['username'],form1.cleaned_data['email'], tmp_pwd)
                 
                 # make association with openid
-                ua = UserAssociation(openid_url=str(openid),user_id=user.id)
+                ua = UserAssociation(openid_url=str(openid),user_id=u.id)
                 ua.save()
                     
                 # login 
-                user.backend = "django.contrib.auth.backends.ModelBackend"
-                login(request, user)
+                u.backend = "django.contrib.auth.backends.ModelBackend"
+                login(request, u)
         elif 'bverify' in request.POST.keys():
             form2 = OpenidVerifyForm(request.POST)
             if form2.is_valid():
@@ -256,11 +332,11 @@ def register(request):
                 next = form2.cleaned_data['next']
                 if not next:
                     next = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
-                user = form2.get_user()
+                u = form2.get_user()
 
-                ua = UserAssociation(openid_url=str(openid),user_id=user.id)
+                ua = UserAssociation(openid_url=str(openid),user_id=u.id)
                 ua.save()
-                login(request, user)
+                login(request, u)
         
         # redirect, can redirect only if forms are valid.
         if is_redirect:
@@ -280,13 +356,9 @@ def signin_failure(request, message):
     """
     falure with openid signin. Go back to signin page.
 
-    template : "authopenid/openid.html"
+    template : "authopenid/signin.html"
     """
-    request_path=reverse('user_signin')
-    if request.GET.get('next'):
-        request_path += '?' + urllib.urlencode({
-            'next': request.GET['next']
-        })
+    next = request.REQUEST.get('next', '')
 
     form_signin = OpenidSigninForm(initial={'next':next})
     form_auth = OpenidAuthForm(initial={'next':next})
@@ -308,7 +380,7 @@ def signup(request):
     """
     action_signin = reverse('user_signin')
 
-    next = request.GET.get('next', '/')
+    next = request.GET.get('next', '')
     form = RegistrationForm(initial={'next':next})
     form_signin = OpenidSigninForm(initial={'next':next})
 
@@ -319,8 +391,7 @@ def signup(request):
         form = RegistrationForm(request.POST)
         if form.is_valid():
 
-            next = form.cleaned_data['next']
-            if not next: next = '/'
+            next = form.cleaned_data.get('next', '')
 
             user = User.objects.create_user(form.cleaned_data['username'],form.cleaned_data['email'], form.cleaned_data['password1'])
            
@@ -346,7 +417,7 @@ def signup(request):
         'action_signin': action_signin,
         },context_instance=RequestContext(request))
 
-@login_required   
+@login_required
 def signout(request):
     """
     signout from the website. Remove openid from session and kill it.
@@ -375,7 +446,7 @@ def account_settings(request,username=None):
 
     url : /username/
 
-    template : account/settings.html
+    template : authopenid/settings.html
     """
     msg = request.GET.get('msg', '')
     is_openid = True
@@ -386,7 +457,7 @@ def account_settings(request,username=None):
         is_openid = False
 
 
-    return render('account/settings.html',
+    return render('authopenid/settings.html',
             {'msg': msg, 'settings_path': request.path, 'is_openid': is_openid},
             context_instance=RequestContext(request))
 
@@ -397,7 +468,7 @@ def changepw(request,username):
     change password view.
 
     url : /username/changepw/
-    template: account/changepw.html
+    template: authopenid/changepw.html
     """
     
     u = get_object_or_404(User, username=username)
@@ -413,9 +484,8 @@ def changepw(request,username):
     else:
         form=ChangepwForm(initial={'username':request.user.username})
 
-    return render('account/changepw.html', {'form': form },
+    return render('authopenid/changepw.html', {'form': form },
                                 context_instance=RequestContext(request))
-
 
 @login_required
 @username_control('user_changeemail')
@@ -425,7 +495,7 @@ def changeemail(request,username):
 
     url: /username/changeemail/
 
-    template : account/changeemail.html
+    template : authopenid/changeemail.html
     """
 
     extension_args = {}
@@ -453,7 +523,7 @@ def changeemail(request,username):
                                         'username':request.user.username
                                         })
     
-    return render('account/changeemail.html', 
+    return render('authopenid/changeemail.html', 
             {'form': form }, context_instance=RequestContext(request))
 
 def emailopenid_success(request, identity_url, openid_response):
@@ -496,7 +566,7 @@ def changeopenid(request, username):
 
     url : /username/changeopenid/
 
-    template: account/changeopenid.html
+    template: authopenid/changeopenid.html
     """
 
     extension_args = {}
@@ -522,7 +592,7 @@ def changeopenid(request, username):
             return complete(request, changeopenid_success, changeopenid_failure)    
 
     form = ChangeopenidForm(initial={'openid_url': openid_url, 'username':request.user.username })
-    return render('account/changeopenid.html', {'form': form,
+    return render('authopenid/changeopenid.html', {'form': form,
         'has_openid': has_openid, 'msg': msg }, context_instance=RequestContext(request))
 
 
@@ -556,6 +626,7 @@ def changeopenid_success(request, identity_url, openid_response):
 def changeopenid_failure(request, message):
     redirect_to="%s?msg=%s" % (reverse('user_changeopenid',kwargs={'username':request.user.username}), urlquote_plus(message))
     return HttpResponseRedirect(redirect_to)
+  
 
 @login_required
 @username_control('user_delete')
@@ -566,7 +637,7 @@ def delete(request,username):
 
     url : /username/delete
 
-    template : account/delete.html
+    template : authopenid/delete.html
     """
 
     extension_args={}
@@ -577,7 +648,7 @@ def delete(request,username):
         form = DeleteForm(request.POST)
         if form.is_valid():
             if not form.test_openid:
-                u.delete()
+                u.delete() 
                 return signout(request)
             else:
                 redirect_to = get_url_host(request) + reverse('user_delete',kwargs={'username':username})
@@ -588,7 +659,7 @@ def delete(request,username):
     form = DeleteForm(initial={'username': username})
 
     msg = request.GET.get('msg','')
-    return render('account/delete.html', {'form': form, 'msg': msg, },
+    return render('authopenid/delete.html', {'form': form, 'msg': msg, },
                                         context_instance=RequestContext(request))
 
 
@@ -630,7 +701,7 @@ def sendpw(request):
 
     url : /sendpw/
 
-    templates :  account/sendpw_email.txt, account/sendpw.html
+    templates :  authopenid/sendpw_email.txt, authopenid/sendpw.html
     """
 
     msg = request.GET.get('msg','')
@@ -650,7 +721,7 @@ def sendpw(request):
             from django.core.mail import send_mail
             current_domain = Site.objects.get_current().domain
             subject = _("Request for a new password")
-            message_template = loader.get_template('account/sendpw_email.txt')
+            message_template = loader.get_template('authopenid/sendpw_email.txt')
             message_context = Context({ 'site_url': 'http://%s' % current_domain,
                 'confirm_key': confirm_key,
                 'username': form.user_cache.username,
@@ -663,7 +734,7 @@ def sendpw(request):
     else:
         form = EmailPasswordForm()
         
-    return render('account/sendpw.html', {'form': form,
+    return render('authopenid/sendpw.html', {'form': form,
             'msg': msg, },
             context_instance=RequestContext(request))
 
@@ -707,17 +778,3 @@ def confirmchangepw(request):
                                         urlquote_plus(msg))
 
     return HttpResponseRedirect(redirect)
-
-       
-
-    
-    
-
-
-    
-
-
-
-
-
-
