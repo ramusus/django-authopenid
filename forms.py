@@ -55,7 +55,7 @@ class OpenidSigninForm(forms.Form):
 
     def clean_next(self):
         if 'next' in self.cleaned_data and self.cleaned_data['next'] != "":
-            next_url_re = re.compile('^/[-\w/]+$')
+            next_url_re = re.compile('^/[-\w/]*$')
             if not next_url_re.match(self.cleaned_data['next']):
                 raise forms.ValidationError(_('next url "%s" is invalid' % self.cleaned_data['next']))
             return self.cleaned_data['next']
@@ -95,7 +95,7 @@ class OpenidAuthForm(forms.Form):
 
     def clean_next(self):
         if 'next' in self.cleaned_data and self.cleaned_data['next'] != "":
-            next_url_re = re.compile('^/[-\w/]+$')
+            next_url_re = re.compile('^/[-\w/]*$')
             if not next_url_re.match(self.cleaned_data['next']):
                 raise forms.ValidationError(_('next url "%s" is invalid' % self.cleaned_data['next']))
             return self.cleaned_data['next']
