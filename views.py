@@ -114,12 +114,12 @@ def ask_openid(request, openid_url, redirect_to, on_failure=None, extension_args
     redirect_url = auth_request.redirectURL(trust_root, redirect_to)
     return HttpResponseRedirect(redirect_url)
 
-def complete(request, on_success=None, on_failure=None):
+def complete(request, on_success=None, on_failure=None, return_to=None):
     on_success = on_success or default_on_success
     on_failure = on_failure or default_on_failure
     
     consumer = Consumer(request.session, DjangoOpenIDStore())
-    openid_response = consumer.complete(dict(request.GET.items()))
+    openid_response = consumer.complete(dict(request.GET.items()), return_to)
     
     if openid_response.status == SUCCESS:
         return on_success(request, openid_response.identity_url, openid_response)
@@ -223,7 +223,7 @@ def signin(request):
 
 def complete_signin(request):
     """ in case of complete signin with openid """
-    return complete(request, signin_success, signin_failure)
+    return complete(request, signin_success, signin_failure, get_url_host(request) + reverse('user_complete_signin'))
 
 
 def signin_success(request, identity_url, openid_response):
@@ -502,6 +502,8 @@ def changeemail(request,username):
  
     u = get_object_or_404(User, username=username) 
     
+    redirect_to = get_url_host(request) + reverse('user_changeemail',kwargs={'username':username})
+
     if request.POST:
         form = ChangeemailForm(request.POST)
         if form.is_valid():
@@ -512,11 +514,10 @@ def changeemail(request,username):
                 redirect="%s?msg=%s" % (reverse('user_account_settings', kwargs={'username': request.user.username}),urlquote_plus(msg))
                 return HttpResponseRedirect(redirect)
             else:
-                redirect_to = "%s?new_email=%s" % (get_url_host(request) + reverse('user_changeemail',kwargs={'username':username}),form.cleaned_data['email'])
-                
+                request.session['new_email'] = form.cleaned_data['email']
                 return ask_openid(request, form.cleaned_data['password'], redirect_to, on_failure=emailopenid_failure)    
     elif not request.POST and 'openid.mode' in request.GET:
-        return complete(request, emailopenid_success, emailopenid_failure) 
+        return complete(request, emailopenid_success, emailopenid_failure, redirect_to) 
     else:
         form = ChangeemailForm(initial={
                                         'email': u.email,
@@ -542,10 +543,11 @@ def emailopenid_success(request, identity_url, openid_response):
     if o.user.username != request.user.username:
         return emailopenid_failure(request, _("The openid %s isn't associated to current logged user" % identity_url))
     
-    new_email=request.GET.get('new_email', '')
+    new_email=request.session.get('new_email', '')
     if new_email:
         u.email=new_email
         u.save()
+        del request.session['new_email']
     msg=_("Email Changed.")
 
     redirect="%s?msg=%s" % (reverse('user_account_settings',kwargs={'username': request.user.username}),urlquote_plus(msg))
@@ -581,15 +583,15 @@ def changeopenid(request, username):
         openid_url = uopenid.openid_url
     except:
         has_openid=False
-         
+    
+    redirect_to = get_url_host(request) + reverse('user_changeopenid',kwargs={'username':username})
     if request.POST and has_openid:
         form=ChangeopenidForm(request.POST)
         if form.is_valid():
-            redirect_to = get_url_host(request) + reverse('user_changeopenid',kwargs={'username':username})
             return ask_openid(request, form.cleaned_data['openid_url'], redirect_to, on_failure=changeopenid_failure)
     elif not request.POST and has_openid:
         if 'openid.mode' in request.GET:
-            return complete(request, changeopenid_success, changeopenid_failure)    
+            return complete(request, changeopenid_success, changeopenid_failure, redirect_to)    
 
     form = ChangeopenidForm(initial={'openid_url': openid_url, 'username':request.user.username })
     return render('authopenid/changeopenid.html', {'form': form,
@@ -644,6 +646,7 @@ def delete(request,username):
     
     u = get_object_or_404(User, username=username)
 
+    redirect_to = get_url_host(request) + reverse('user_delete',kwargs={'username':username}) 
     if request.POST:
         form = DeleteForm(request.POST)
         if form.is_valid():
@@ -651,10 +654,9 @@ def delete(request,username):
                 u.delete() 
                 return signout(request)
             else:
-                redirect_to = get_url_host(request) + reverse('user_delete',kwargs={'username':username})
                 return ask_openid(request, form.cleaned_data['password'], redirect_to, on_failure=deleteopenid_failure)
     elif not request.POST and 'openid.mode' in request.GET:
-        return complete(request, deleteopenid_success, deleteopenid_failure) 
+        return complete(request, deleteopenid_success, deleteopenid_failure, redirect_to) 
     
     form = DeleteForm(initial={'username': username})
 
