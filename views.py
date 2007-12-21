@@ -133,14 +133,7 @@ def complete(request, on_success=None, on_failure=None, return_to=None):
         assert False, "Bad openid status: %s" % openid_response.status
 
 def default_on_success(request, identity_url, openid_response):
-    if 'openids' not in request.session.keys():
-        request.session['openids'] = []
-    
-    # Eliminate any duplicates
-    request.session['openids'] = [
-        o for o in request.session['openids'] if o.openid != identity_url
-    ]
-    request.session['openids'].append(from_openid_response(openid_response))
+    request.session['openid']=from_openid_response(openid_response)
     
     next = request.GET.get('next', '').strip()
     if not next or not is_valid_next_url(next):
@@ -237,9 +230,8 @@ def signin_success(request, identity_url, openid_response):
     if openid isn't registered user is redirected to register page.
     """
 
-    request.session['openids'] = []
     openid=from_openid_response(openid_response)
-    request.session['openids'].append(openid)
+    request.session['openid']=openid
 
     try:
         rel = UserAssociation.objects.get(openid_url__exact=str(openid))
@@ -287,10 +279,8 @@ def register(request):
         next = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
 
 
-    openids = request.session.get('openids', [])
-    if openids and len(openids)>0:
-        openid = openids[-1] # Last authenticated OpenID
-    else:
+    openid = request.session.get('openid', None)
+    if not openid:
          return HttpResponseRedirect(reverse('user_signin') + next)
 
     nickname = openid.sreg.get('nickname', '')
@@ -424,7 +414,7 @@ def signout(request):
 
     url : /signout/"
     """
-    request.session['openids'] = []
+    del request.session['openid']
     next = request.GET.get('next', '/')
     if not is_valid_next_url(next):
         next = '/'
