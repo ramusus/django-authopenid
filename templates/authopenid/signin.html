@@ -25,7 +25,7 @@
 <div class="login">
 
     <form name="fauth" action="{{ action }}" method="post">
-        {{ form.next }}
+        {{ form1.next }}
 	<fieldset>
 		<legend>{% trans "Sign In Using Your Account ID" %}</legend>
 		<div class="form-row"><label for="id_username">{% trans "Username:" %}</label><br />{{ form1.username }}</div>
@@ -37,7 +37,7 @@
 
 <br />
 <form name="fopenid" action="{{ action }}" method="post">
-    {{ form.next }}
+    {{ form2.next }}
 	<fieldset>
 		<legend>{% trans "Sign In Using Your OpenID" %}</legend>
         <div class="form-row"><label for="id_openid_ul">{% trans "OpenId URL :" %}</label><br />{{ form2.openid_url }}</div>
