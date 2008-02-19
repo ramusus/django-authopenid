@@ -43,7 +43,7 @@ from django.utils.http import urlquote_plus, urlquote
 from openid.consumer.consumer import Consumer, \
     SUCCESS, CANCEL, FAILURE, SETUP_NEEDED
 from openid.consumer.discover import DiscoveryFailure
-
+from openid.extensions import sreg
 # needed for some linux distributions like debian
 try:
     from openid.yadis import xri
@@ -86,12 +86,11 @@ def is_valid_next_url(next):
     # path, not a complete URL.
     return bool(next_url_re.match(next))
 
-def ask_openid(request, openid_url, redirect_to, on_failure=None, extension_args=None):
+def ask_openid(request, openid_url, redirect_to, on_failure=None, sreg_request=None):
     """ basic function to ask openid and return response """
 
     on_failure = on_failure or signin_failure
-    extension_args = extension_args or {}
-
+    
     trust_root = getattr(
         settings, 'OPENID_TRUST_ROOT', get_url_host(request) + '/'
     )
@@ -107,10 +106,7 @@ def ask_openid(request, openid_url, redirect_to, on_failure=None, extension_args
         msg =_("The OpenID %s was invalid" % openid_url)
         return on_failure(request,msg)
 
-    # Add extension args (for things like simple registration)
-    for name, value in extension_args.items():
-        namespace, key = name.split('.', 1)
-        auth_request.addExtensionArg(namespace, key, value)
+    auth_request.addExtension(sreg_request)
     redirect_url = auth_request.redirectURL(trust_root, redirect_to)
     return HttpResponseRedirect(redirect_url)
 
@@ -158,7 +154,6 @@ def signin(request):
     """
 
     on_failure = signin_failure
-    extension_args = {}
     next = ''
 
 
@@ -182,7 +177,7 @@ def signin(request):
                 if not next:
                     next = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
 
-                extension_args['sreg.optional'] = 'email,nickname'
+                sreg_req = sreg.SRegRequest(optional=['nickname','email'])
                 redirect_to = "%s?next=%s" % (
                         get_url_host(request) + reverse('user_complete_signin'), 
                         urllib.urlencode({'next':next}))
@@ -191,7 +186,7 @@ def signin(request):
                         form_signin.cleaned_data['openid_url'], 
                         redirect_to, 
                         on_failure=signin_failure, 
-                        extension_args=extension_args)
+                        sreg_request=sreg_req)
 
         elif 'blogin' in request.POST.keys():
             # perform normal django authentification

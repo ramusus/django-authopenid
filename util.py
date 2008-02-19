@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 from openid.store.interface import OpenIDStore
 from openid.association import Association as OIDAssociation
+from openid.association import Association
+from openid.extensions import sreg
+import openid.store
+
 from django.db.models.query import Q
 from django.conf import settings
 
-import openid.store
 
 # needed for some linux distributions like debian
 try:
@@ -121,5 +124,5 @@ def from_openid_response(openid_response):
     issued = int(time.time())
     return OpenID(
         openid_response.identity_url, issued, openid_response.signed_fields, 
-        openid_response.extensionResponse('sreg', False)
+         dict(sreg.SRegResponse.fromSuccessResponse(openid_response))
     )
