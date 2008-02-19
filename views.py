@@ -212,7 +212,7 @@ def signin(request):
         'action': request.path,
         'msg':  request.GET.get('msg',''),
         'sendpw_url': reverse('user_sendpw'),
-    })
+    }, context_instance=RequestContext(request))
 
 def complete_signin(request):
     """ in case of complete signin with openid """
@@ -357,7 +357,7 @@ def signin_failure(request, message):
         'msg': message,
         'form1': form_auth,
         'form2': form_signin,
-    })
+    }, context_instance=RequestContext(request))
 
 
 def signup(request):
