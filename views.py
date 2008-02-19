@@ -414,7 +414,10 @@ def signout(request):
 
     url : /signout/"
     """
-    del request.session['openid']
+    try:
+        del request.session['openid']
+    except KeyError:
+        pass
     next = request.GET.get('next', '/')
     if not is_valid_next_url(next):
         next = '/'
