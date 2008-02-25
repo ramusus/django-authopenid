@@ -178,7 +178,7 @@ def signin(request):
                     next = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
 
                 sreg_req = sreg.SRegRequest(optional=['nickname','email'])
-                redirect_to = "%s?next=%s" % (
+                redirect_to = "%s?%s" % (
                         get_url_host(request) + reverse('user_complete_signin'), 
                         urllib.urlencode({'next':next}))
 
