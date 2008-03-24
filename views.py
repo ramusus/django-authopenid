@@ -39,6 +39,7 @@ from django.utils.translation import ugettext as _
 from django.contrib.sites.models import Site
 from django.utils.encoding import smart_str
 from django.utils.http import urlquote_plus, urlquote
+from django.core.mail import send_mail
 
 from openid.consumer.consumer import Consumer, \
     SUCCESS, CANCEL, FAILURE, SETUP_NEEDED
@@ -102,7 +103,7 @@ def ask_openid(request, openid_url, redirect_to, on_failure=None, sreg_request=N
     consumer = Consumer(request.session, DjangoOpenIDStore())
     try:
         auth_request = consumer.begin(openid_url)
-    except DiscoveryFailure:
+    except:
         msg =_("The OpenID %s was invalid" % openid_url)
         return on_failure(request,msg)
 
@@ -707,8 +708,7 @@ def sendpw(request):
             q.new_password=new_pw
             q.confirm_key = confirm_key
             q.save()
-            # send email
-            from django.core.mail import send_mail
+            # send email 
             current_domain = Site.objects.get_current().domain
             subject = _("Request for a new password")
             message_template = loader.get_template('authopenid/sendpw_email.txt')
