@@ -2,6 +2,9 @@ django_authopenid
 Author : Benoît Chesneau <benoitc@metavers.net>
 Url : http://code.google.com/p/django-authopenid/
 
+Updated version of this doc is always here :
+http://code.google.com/p/django-authopenid/wiki/README
+
 Description :
 Django application to manage authenification with openid using django auth contrib.
 
