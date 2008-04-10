@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
- Copyright (c) 2007, Benoît Chesneau
+ Copyright (c) 2007, 2008, Benoît Chesneau
  Copyright (c) 2007, Simon Willison, original work on django-openid
 
  All rights reserved.
@@ -59,8 +59,6 @@ from models import UserAssociation, UserPasswordQueue
 from forms import OpenidSigninForm, OpenidAuthForm, OpenidRegisterForm, \
         OpenidVerifyForm, RegistrationForm, ChangepwForm, ChangeemailForm, \
         ChangeopenidForm, DeleteForm, EmailPasswordForm
-
-from decorators import username_control
 
 def get_url_host(request):
     if request.is_secure():
@@ -403,7 +401,6 @@ def signup(request):
         'action_signin': action_signin,
         },context_instance=RequestContext(request))
 
-@login_required
 def signout(request):
     """
     signout from the website. Remove openid from session and kill it.
@@ -421,11 +418,9 @@ def signout(request):
     logout(request)
     
     return HttpResponseRedirect(next)
+signout = login_required(signout)
 
-
-@login_required
-@username_control ('user_account_settings')
-def account_settings(request,username=None):
+def account_settings(request):
     """
     index pages to changes some basic account settings :
      - change password
@@ -433,7 +428,7 @@ def account_settings(request,username=None):
      - associate a new openid
      - delete account
 
-    url : /username/
+    url : /
 
     template : authopenid/settings.html
     """
@@ -441,7 +436,7 @@ def account_settings(request,username=None):
     is_openid = True
 
     try:
-        o=UserAssociation.objects.get(user__username__exact=username)
+        o=UserAssociation.objects.get(user__username__exact=request.user.username)
     except:
         is_openid = False
 
@@ -449,18 +444,17 @@ def account_settings(request,username=None):
     return render('authopenid/settings.html',
             {'msg': msg, 'settings_path': request.path, 'is_openid': is_openid},
             context_instance=RequestContext(request))
+account_settings = login_required(account_settings)
 
-@login_required
-@username_control('user_changepw')
-def changepw(request,username):
+def changepw(request):
     """
     change password view.
 
-    url : /username/changepw/
+    url : /changepw/
     template: authopenid/changepw.html
     """
     
-    u = get_object_or_404(User, username=username)
+    u = request.user
     
     if request.POST:
         form = ChangepwForm(request.POST)
@@ -468,30 +462,29 @@ def changepw(request,username):
             u.set_password(form.cleaned_data['password1'])
             u.save()
             msg=_("Password changed.") 
-            redirect="%s?msg=%s" % (reverse('user_account_settings',kwargs={'username': request.user.username}),urlquote_plus(msg))
+            redirect="%s?msg=%s" % (reverse('user_account_settings'),urlquote_plus(msg))
             return HttpResponseRedirect(redirect)
     else:
-        form=ChangepwForm(initial={'username':request.user.username})
+        form=ChangepwForm(initial={'username':u.username})
 
     return render('authopenid/changepw.html', {'form': form },
                                 context_instance=RequestContext(request))
+changepw = login_required(changepw)
 
-@login_required
-@username_control('user_changeemail')
-def changeemail(request,username):
+def changeemail(request):
     """ 
     changeemail view. It require password or openid to allow change.
 
-    url: /username/changeemail/
+    url: /changeemail/
 
     template : authopenid/changeemail.html
     """
 
     extension_args = {}
  
-    u = get_object_or_404(User, username=username) 
+    u = request.user
     
-    redirect_to = get_url_host(request) + reverse('user_changeemail',kwargs={'username':username})
+    redirect_to = get_url_host(request) + reverse('user_changeemail')
 
     if request.POST:
         form = ChangeemailForm(request.POST)
@@ -500,7 +493,7 @@ def changeemail(request,username):
                 u.email = form.cleaned_data['email']
                 u.save()
                 msg=_("Email changed.") 
-                redirect="%s?msg=%s" % (reverse('user_account_settings', kwargs={'username': request.user.username}),urlquote_plus(msg))
+                redirect="%s?msg=%s" % (reverse('user_account_settings'),urlquote_plus(msg))
                 return HttpResponseRedirect(redirect)
             else:
                 request.session['new_email'] = form.cleaned_data['email']
@@ -510,11 +503,12 @@ def changeemail(request,username):
     else:
         form = ChangeemailForm(initial={
                                         'email': u.email,
-                                        'username':request.user.username
+                                        'username': u.username
                                         })
     
     return render('authopenid/changeemail.html', 
             {'form': form }, context_instance=RequestContext(request))
+changeemail = login_required(changeemail)
 
 def emailopenid_success(request, identity_url, openid_response):
     openid=from_openid_response(openid_response)
@@ -539,23 +533,20 @@ def emailopenid_success(request, identity_url, openid_response):
         del request.session['new_email']
     msg=_("Email Changed.")
 
-    redirect="%s?msg=%s" % (reverse('user_account_settings',kwargs={'username': request.user.username}),urlquote_plus(msg))
+    redirect="%s?msg=%s" % (reverse('user_account_settings'),urlquote_plus(msg))
     return HttpResponseRedirect(redirect)
     
 
 def emailopenid_failure(request, message):
-    redirect_to="%s?msg=%s" % (reverse('user_changeemail',kwargs={'username':request.user.username}), urlquote_plus(message))
-
+    redirect_to="%s?msg=%s" % (reverse('user_changeemail'), urlquote_plus(message))
     return HttpResponseRedirect(redirect_to)
  
 
-@login_required
-@username_control('user_changeopenid')
-def changeopenid(request, username):
+def changeopenid(request):
     """
     change openid view. Allow user to change openid associated to its username.
 
-    url : /username/changeopenid/
+    url : /changeopenid/
 
     template: authopenid/changeopenid.html
     """
@@ -565,7 +556,7 @@ def changeopenid(request, username):
     has_openid=True
     msg = request.GET.get('msg', '')
         
-    u = get_object_or_404(User, username=username)
+    u = request.user
 
     try:
         uopenid=UserAssociation.objects.get(user=u)
@@ -573,7 +564,7 @@ def changeopenid(request, username):
     except:
         has_openid=False
     
-    redirect_to = get_url_host(request) + reverse('user_changeopenid',kwargs={'username':username})
+    redirect_to = get_url_host(request) + reverse('user_changeopenid')
     if request.POST and has_openid:
         form=ChangeopenidForm(request.POST)
         if form.is_valid():
@@ -582,10 +573,10 @@ def changeopenid(request, username):
         if 'openid.mode' in request.GET:
             return complete(request, changeopenid_success, changeopenid_failure, redirect_to)    
 
-    form = ChangeopenidForm(initial={'openid_url': openid_url, 'username':request.user.username })
+    form = ChangeopenidForm(initial={'openid_url': openid_url, 'username':u.username })
     return render('authopenid/changeopenid.html', {'form': form,
         'has_openid': has_openid, 'msg': msg }, context_instance=RequestContext(request))
-
+changeopenid = login_required(changeopenid)
 
 def changeopenid_success(request, identity_url, openid_response):
     openid=from_openid_response(openid_response)
@@ -610,32 +601,30 @@ def changeopenid_success(request, identity_url, openid_response):
     request.session['openids'].append(openid)
 
     msg=_("Openid %s associated with your account." % identity_url) 
-    redirect="%s?msg=%s" % (reverse('user_account_settings', kwargs={'username':request.user.username}), urlquote_plus(msg))
+    redirect="%s?msg=%s" % (reverse('user_account_settings'), urlquote_plus(msg))
     return HttpResponseRedirect(redirect)
     
 
 def changeopenid_failure(request, message):
-    redirect_to="%s?msg=%s" % (reverse('user_changeopenid',kwargs={'username':request.user.username}), urlquote_plus(message))
+    redirect_to="%s?msg=%s" % (reverse('user_changeopenid'), urlquote_plus(message))
     return HttpResponseRedirect(redirect_to)
   
 
-@login_required
-@username_control('user_delete')
-def delete(request,username):
+def delete(request):
     """
     delete view. Allow user to delete its account. Password/openid are required to 
     confirm it. He should also check the confirm checkbox.
 
-    url : /username/delete
+    url : /delete
 
     template : authopenid/delete.html
     """
 
     extension_args={}
     
-    u = get_object_or_404(User, username=username)
+    u = request.user
 
-    redirect_to = get_url_host(request) + reverse('user_delete',kwargs={'username':username}) 
+    redirect_to = get_url_host(request) + reverse('user_delete') 
     if request.POST:
         form = DeleteForm(request.POST)
         if form.is_valid():
@@ -647,12 +636,12 @@ def delete(request,username):
     elif not request.POST and 'openid.mode' in request.GET:
         return complete(request, deleteopenid_success, deleteopenid_failure, redirect_to) 
     
-    form = DeleteForm(initial={'username': username})
+    form = DeleteForm(initial={'username': u.username})
 
     msg = request.GET.get('msg','')
     return render('authopenid/delete.html', {'form': form, 'msg': msg, },
                                         context_instance=RequestContext(request))
-
+delete = login_required(delete)
 
 def deleteopenid_success(request, identity_url, openid_response):
     openid=from_openid_response(openid_response)
@@ -679,8 +668,7 @@ def deleteopenid_success(request, identity_url, openid_response):
     
 
 def deleteopenid_failure(request, message):
-    redirect_to="%s?msg=%s" % (reverse('user_delete',kwargs={'username':request.user.username}), urlquote_plus(message))
-
+    redirect_to="%s?msg=%s" % (reverse('user_delete'), urlquote_plus(message))
     return HttpResponseRedirect(redirect_to)
 
 
