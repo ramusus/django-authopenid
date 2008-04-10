@@ -81,11 +81,8 @@ all code is documented so you could esayly know what do a view.
 
 == templates ==
 
-Templates are in 2 folders :
- * account : templates for account settings
- * authopeind : signin/signup templates 
+Templates are in *templates/authopenid* folder :
 
-*authopenid* :
  * changeemail.html  : change email page
  * changepw.html : change password 
  * sendpw.html : send password
