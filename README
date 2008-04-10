@@ -70,14 +70,14 @@ all code is documented so you could esayly know what do a view.
   * /account/signout : signout url
   * /account/signin/complete/ : register openid after signin 
   * /account/signup : legacy authentification 
-  * /account/password : send a new password
+  * /account/sendpw/password : send a new password
   * /account/password/confirm : confirm change of password
  * account settings : 
-  * /acount/username : main page of account for user with username _username_
-  * /account/username/password: change password page
-  * /account/username/email : change email page
-  * /account/username/delete : delete account
-  * /account/username/openid : associate a new openid for an account.
+  * /acount : main page of account for user  
+  * /account/password: change password page
+  * /account/email : change email page
+  * /account/delete : delete account
+  * /account/openid : associate a new openid for an account.
 
 == templates ==
 
