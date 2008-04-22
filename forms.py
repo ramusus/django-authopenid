@@ -216,10 +216,15 @@ class RegistrationForm(forms.Form):
 
 class ChangepwForm(forms.Form):
     """ change password form """
-    username = forms.CharField(max_length=30,widget=forms.HiddenInput())
     oldpw = forms.CharField(widget=forms.PasswordInput(attrs=attrs_dict))
     password1 = forms.CharField(widget=forms.PasswordInput(attrs=attrs_dict))
     password2 = forms.CharField(widget=forms.PasswordInput(attrs=attrs_dict))
+
+    def __init__(self, data=None, user=None, *args, **kwargs):
+        if user is None:
+            raise TypeError("Keyword argument 'user' must be supplied")
+        super(ChangepwForm, self).__init__(data, *args, **kwargs)
+        self.user = user
 
     def clean_oldpw(self):
         if 'oldpw' in self.cleaned_data:
@@ -245,49 +250,46 @@ class ChangepwForm(forms.Form):
         
 class ChangeemailForm(forms.Form):
     """ change email form """
-    username = forms.CharField(max_length=30,widget=forms.HiddenInput())
     email = forms.CharField(max_length=255,widget=forms.TextInput(attrs={'class': "required validate-email" }))
     password = forms.CharField(widget=forms.PasswordInput(attrs=attrs_dict))
 
-    def __init__(self, data=None, files=None, auto_id='id_%s', prefix=None, initial=None):
+    def __init__(self, data=None, files=None, auto_id='id_%s', prefix=None, 
+            initial=None, user=None):
+        if user is None:
+            raise TypeError("Keyword argument 'user' must be supplied")
         super(ChangeemailForm, self).__init__(data, files, auto_id, prefix, initial)
         self.test_openid=False
+        self.user = user
 
     def clean_password(self):
         if 'password' in self.cleaned_data:
-            try:
-                u=User.objects.get(username=self.cleaned_data['username'])
-            except:
-                raise forms.ValidationError(_("Incorrect username."))
-                 
-            if not u.check_password(self.cleaned_data['password']):
+            if not self.user.check_password(self.cleaned_data['password']):
                 self.test_openid=True
         return self.cleaned_data['password']
                 
 class ChangeopenidForm(forms.Form):
     """ change openid form """
-    username = forms.CharField(max_length=30,widget=forms.HiddenInput())
     openid_url = forms.CharField(max_length=255,widget=forms.TextInput(attrs={'class': "required" }))
-
+    def __init__(self, data=None, user=None, *args, **kwargs):
+        if user is None:
+            raise TypeError("Keyword argument 'user' must be supplied")
+        super(ChangeopenidForm, self).__init__(data, *args, **kwargs)
+        self.user = user
 
 class DeleteForm(forms.Form):
     """ confirm form to delete an account """
-    username = forms.CharField(max_length=30,widget=forms.HiddenInput())
     confirm = forms.CharField(widget=forms.CheckboxInput(attrs=attrs_dict))
     password = forms.CharField(widget=forms.PasswordInput(attrs=attrs_dict))
 
-    def __init__(self, data=None, files=None, auto_id='id_%s', prefix=None, initial=None):
+    def __init__(self, data=None, files=None, auto_id='id_%s', prefix=None, 
+            initial=None, user=None):
         super(DeleteForm, self).__init__(data, files, auto_id, prefix, initial)
         self.test_openid=False
+        self.user = user
 
     def clean_password(self):
         if 'password' in self.cleaned_data:
-            try:
-                u=User.objects.get(username=self.cleaned_data['username'])
-            except:
-                raise forms.ValidationError(_("Incorrect username."))
-                 
-            if not u.check_password(self.cleaned_data['password']):
+            if not self.user.check_password(self.cleaned_data['password']):
                 self.test_openid=True
         return self.cleaned_data['password']
 
