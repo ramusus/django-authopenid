@@ -105,7 +105,8 @@ def ask_openid(request, openid_url, redirect_to, on_failure=None, sreg_request=N
         msg =_("The OpenID %s was invalid" % openid_url)
         return on_failure(request,msg)
 
-    auth_request.addExtension(sreg_request)
+    if sreg_request:
+        auth_request.addExtension(sreg_request)
     redirect_url = auth_request.redirectURL(trust_root, redirect_to)
     return HttpResponseRedirect(redirect_url)
 
@@ -457,7 +458,7 @@ def changepw(request):
     u = request.user
     
     if request.POST:
-        form = ChangepwForm(request.POST)
+        form = ChangepwForm(request.POST, user=u)
         if form.is_valid():
             u.set_password(form.cleaned_data['password1'])
             u.save()
@@ -465,7 +466,7 @@ def changepw(request):
             redirect="%s?msg=%s" % (reverse('user_account_settings'),urlquote_plus(msg))
             return HttpResponseRedirect(redirect)
     else:
-        form=ChangepwForm(initial={'username':u.username})
+        form=ChangepwForm(user=u)
 
     return render('authopenid/changepw.html', {'form': form },
                                 context_instance=RequestContext(request))
@@ -487,7 +488,7 @@ def changeemail(request):
     redirect_to = get_url_host(request) + reverse('user_changeemail')
 
     if request.POST:
-        form = ChangeemailForm(request.POST)
+        form = ChangeemailForm(request.POST, user=u)
         if form.is_valid():
             if not form.test_openid:
                 u.email = form.cleaned_data['email']
@@ -501,10 +502,7 @@ def changeemail(request):
     elif not request.POST and 'openid.mode' in request.GET:
         return complete(request, emailopenid_success, emailopenid_failure, redirect_to) 
     else:
-        form = ChangeemailForm(initial={
-                                        'email': u.email,
-                                        'username': u.username
-                                        })
+        form = ChangeemailForm(initial={'email': u.email}, user=u)
     
     return render('authopenid/changeemail.html', 
             {'form': form }, context_instance=RequestContext(request))
@@ -513,11 +511,7 @@ changeemail = login_required(changeemail)
 def emailopenid_success(request, identity_url, openid_response):
     openid=from_openid_response(openid_response)
 
-    try:
-        u=User.objects.get(username=request.user.username)
-    except:
-        raise Http404
-
+    u = request.user
     try:
         o=UserAssociation.objects.get(openid_url__exact=identity_url)
     except:
@@ -566,14 +560,14 @@ def changeopenid(request):
     
     redirect_to = get_url_host(request) + reverse('user_changeopenid')
     if request.POST and has_openid:
-        form=ChangeopenidForm(request.POST)
+        form=ChangeopenidForm(request.POST, user=u)
         if form.is_valid():
             return ask_openid(request, form.cleaned_data['openid_url'], redirect_to, on_failure=changeopenid_failure)
     elif not request.POST and has_openid:
         if 'openid.mode' in request.GET:
             return complete(request, changeopenid_success, changeopenid_failure, redirect_to)    
 
-    form = ChangeopenidForm(initial={'openid_url': openid_url, 'username':u.username })
+    form = ChangeopenidForm(initial={'openid_url': openid_url }, user=u)
     return render('authopenid/changeopenid.html', {'form': form,
         'has_openid': has_openid, 'msg': msg }, context_instance=RequestContext(request))
 changeopenid = login_required(changeopenid)
@@ -626,7 +620,7 @@ def delete(request):
 
     redirect_to = get_url_host(request) + reverse('user_delete') 
     if request.POST:
-        form = DeleteForm(request.POST)
+        form = DeleteForm(request.POST, user=u)
         if form.is_valid():
             if not form.test_openid:
                 u.delete() 
@@ -636,7 +630,7 @@ def delete(request):
     elif not request.POST and 'openid.mode' in request.GET:
         return complete(request, deleteopenid_success, deleteopenid_failure, redirect_to) 
     
-    form = DeleteForm(initial={'username': u.username})
+    form = DeleteForm(user=u)
 
     msg = request.GET.get('msg','')
     return render('authopenid/delete.html', {'form': form, 'msg': msg, },
@@ -646,11 +640,7 @@ delete = login_required(delete)
 def deleteopenid_success(request, identity_url, openid_response):
     openid=from_openid_response(openid_response)
 
-    try:
-        u=User.objects.get(username=request.user.username)
-    except:
-        raise Http404
-
+    u = request.user
     try:
         o=UserAssociation.objects.get(openid_url__exact=identity_url)
     except:
