@@ -227,14 +227,8 @@ class ChangepwForm(forms.Form):
         self.user = user
 
     def clean_oldpw(self):
-        if 'oldpw' in self.cleaned_data:
-            try:
-                u=User.objects.get(username=self.cleaned_data['username'])
-            except:
-                 raise forms.ValidationError(_("Incorrect username. What are you trying to do ..."))
-                 
-            if not u.check_password(self.cleaned_data['oldpw']):
-                raise forms.ValidationError(_("Old password is wrong. Please enter a valid password."))
+        if not self.user.check_password(self.cleaned_data['oldpw']):
+            raise forms.ValidationError(_("Old password is wrong. Please enter a valid password."))
         return self.cleaned_data['oldpw']
     
     def clean_password2(self):
