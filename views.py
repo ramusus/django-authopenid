@@ -366,6 +366,9 @@ def signup(request):
     action_signin = reverse('user_signin')
 
     next = request.GET.get('next', '')
+    if not next or not is_valid_next_url(next):
+        next = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
+
     form = RegistrationForm(initial={'next':next})
     form_signin = OpenidSigninForm(initial={'next':next})
 
@@ -377,6 +380,8 @@ def signup(request):
         if form.is_valid():
 
             next = form.cleaned_data.get('next', '')
+            if not next or not is_valid_next_url(next):
+                next = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
 
             user = User.objects.create_user(form.cleaned_data['username'],form.cleaned_data['email'], form.cleaned_data['password1'])
            
