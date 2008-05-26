@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2007, 2008, Benoît Chesneau
+# Copyright (c) 2007 Simon Willison, original work on django-openid
 # 
 # All rights reserved.
 # 
