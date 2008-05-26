@@ -11,7 +11,7 @@ evaluation=10.0 - ((float(5 * error + warning + refactor + convention) / stateme
 comment=no
 
 [FORMAT]
-max-line-length=80
+max-line-length=79
 
 
 [BASIC]
