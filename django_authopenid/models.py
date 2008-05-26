@@ -5,7 +5,11 @@ from django.conf import settings
 
 import md5, random, sys, os, time
 
+__all__ = ['Nonce', 'Association', 'UserAssociation', 
+        'UserPasswordQueueManager', 'UserPasswordQueue']
+
 class Nonce(models.Model):
+    """ openid nonce """
     server_url = models.CharField(max_length=255)
     timestamp = models.IntegerField()
     salt = models.CharField(max_length=40)
@@ -15,6 +19,7 @@ class Nonce(models.Model):
 
     
 class Association(models.Model):
+    """ association openid url and lifetime """
     server_url = models.TextField(max_length=2047)
     handle = models.CharField(max_length=255)
     secret = models.TextField(max_length=255) # Stored base64 encoded
@@ -30,22 +35,25 @@ class UserAssociation(models.Model):
     model to manage association between openid and user 
     """
     openid_url = models.CharField(blank=False, max_length=255)
-    user = models.ForeignKey(User,unique=True)
+    user = models.ForeignKey(User, unique=True)
     
     def __unicode__(self):
         return "Openid %s with user %s" % (self.openid_url, self.user)
         
     class Admin:
-        pass
+        """ default admin class """
 
 
 class UserPasswordQueueManager(models.Manager):
+    """ manager for UserPasswordQueue object """
     def get_new_confirm_key(self):
         "Returns key that isn't being used."
         # The random module is seeded when this Apache child is created.
         # Use SECRET_KEY as added salt.
         while 1:
-            confirm_key = md5.new("%s%s%s%s" % (random.randint(0, sys.maxint - 1), os.getpid(), time.time(), settings.SECRET_KEY)).hexdigest()
+            confirm_key = md5.new("%s%s%s%s" % (
+                random.randint(0, sys.maxint - 1), os.getpid(),
+                time.time(), settings.SECRET_KEY)).hexdigest()
             try:
                 self.get(confirm_key=confirm_key)
             except self.model.DoesNotExist:
@@ -62,7 +70,6 @@ class UserPasswordQueue(models.Model):
     confirm_key = models.CharField(max_length=40)
 
     objects = UserPasswordQueueManager()
-
 
     def __unicode__(self):
         return self.user.username

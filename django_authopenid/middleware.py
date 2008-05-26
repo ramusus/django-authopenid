@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+
+__all__ = ["OpenIDMiddleware"]
+
 class OpenIDMiddleware(object):
     """
     Populate request.openid. This comes either from cookie or from

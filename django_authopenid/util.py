@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from openid.store.interface import OpenIDStore
 from openid.association import Association as OIDAssociation
-from openid.association import Association
 from openid.extensions import sreg
 import openid.store
 
@@ -19,12 +18,14 @@ import time, base64, md5, operator
 
 from models import Association, Nonce
 
+__all__ = ['OpenID', 'DjangoOpenIDStore', 'from_openid_response']
+
 class OpenID:
-    def __init__(self, openid, issued, attrs=None, sreg=None):
-        self.openid = openid
+    def __init__(self, openid_, issued, attrs=None, sreg_=None):
+        self.openid = openid_
         self.issued = issued
         self.attrs = attrs or {}
-        self.sreg = sreg or {}
+        self.sreg = sreg_ or {}
         self.is_iname = (xri.identifierScheme(openid) == 'XRI')
     
     def __repr__(self):
@@ -87,7 +88,7 @@ class DjangoOpenIDStore(OpenIDStore):
         if abs(timestamp - time.time()) > openid.store.nonce.SKEW:
             return False
         
-        query =[
+        query = [
                 Q(server_url__exact=server_url),
                 Q(timestamp__exact=timestamp),
                 Q(salt__exact=salt),
@@ -99,7 +100,7 @@ class DjangoOpenIDStore(OpenIDStore):
                     server_url=server_url,
                     timestamp=timestamp,
                     salt=salt
-            );
+            )
             ononce.save()
             return True
         
@@ -121,6 +122,7 @@ class DjangoOpenIDStore(OpenIDStore):
         return False
 
 def from_openid_response(openid_response):
+    """ return openid object from response """
     issued = int(time.time())
     return OpenID(
         openid_response.identity_url, issued, openid_response.signed_fields, 
