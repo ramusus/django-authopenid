@@ -341,9 +341,7 @@ def register(request):
         
         # redirect, can redirect only if forms are valid.
         if is_redirect:
-            return HttpResponseRedirect(next)
-    
-    
+            return HttpResponseRedirect(next) 
     
     return render('authopenid/complete.html', {
         'form1': form1,
@@ -513,9 +511,8 @@ def changeemail(request):
 
     template : authopenid/changeemail.html
     """
-
+    msg = request.GET.get('msg', '')
     extension_args = {}
- 
     user_ = request.user
     
     redirect_to = get_url_host(request) + reverse('user_changeemail')
@@ -541,8 +538,10 @@ def changeemail(request):
         form = ChangeemailForm(initial={'email': user_.email},
                 user=user_)
     
-    return render('authopenid/changeemail.html', 
-            {'form': form }, context_instance=RequestContext(request))
+    return render('authopenid/changeemail.html', {
+        'form': form,
+        'msg': msg 
+        }, context_instance=RequestContext(request))
 changeemail = login_required(changeemail)
 
 def emailopenid_success(request, identity_url, openid_response):
