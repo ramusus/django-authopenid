@@ -19,6 +19,10 @@
 </p>
 {% endif %}
 
+{% if msg %}
+<p class="errors">{{ msg }}</p>
+{% endif %}
+
 <div class="aligned">
 	<form action="{{ path }}" method="post" accept-charset="utf-8">
 
