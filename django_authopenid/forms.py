@@ -110,7 +110,7 @@ class OpenidRegisterForm(forms.Form):
     next = forms.CharField(max_length=255,widget=forms.HiddenInput(), required=False)
 
     username = forms.CharField(max_length=30, widget=forms.widgets.TextInput(attrs=attrs_dict))
-    email = forms.CharField(max_length=255, widget=forms.widgets.TextInput(attrs=attrs_dict))
+    email = forms.EmailField(widget=forms.TextInput(attrs=dict(attrs_dict, maxlength=200))
     
     def clean_username(self):
         if 'username' in self.cleaned_data:
@@ -244,7 +244,8 @@ class ChangepwForm(forms.Form):
         
 class ChangeemailForm(forms.Form):
     """ change email form """
-    email = forms.CharField(max_length=255,widget=forms.TextInput(attrs={'class': "required validate-email" }))
+    email = forms.EmailField(widget=forms.TextInput(attrs=dict(attrs_dict, 
+        maxlength=200))
     password = forms.CharField(widget=forms.PasswordInput(attrs=attrs_dict))
 
     def __init__(self, data=None, files=None, auto_id='id_%s', prefix=None, 
