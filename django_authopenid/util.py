@@ -26,7 +26,7 @@ class OpenID:
         self.issued = issued
         self.attrs = attrs or {}
         self.sreg = sreg_ or {}
-        self.is_iname = (xri.identifierScheme(openid) == 'XRI')
+        self.is_iname = (xri.identifierScheme(openid_) == 'XRI')
     
     def __repr__(self):
         return '<OpenID: %s>' % self.openid
