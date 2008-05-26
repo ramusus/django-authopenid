@@ -50,7 +50,7 @@ ROOT_URLCONF = 'djauthaupenid_example.urls'
 TEMPLATE_DIRS = (
     os.path.join(PROJECT_PATH, 'templates'),
 )
-print os.path.join(PROJECT_PATH, 'templates')
+
 INSTALLED_APPS = (
     'django.contrib.auth',
     'django.contrib.contenttypes',
