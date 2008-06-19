@@ -153,6 +153,17 @@ def default_on_failure(request, message):
     })
 
 
+def not_authenticated(func):
+    """ decorator that redirect user to next page if
+    he is already logged."""
+    def decorated(request, **kwargs):
+        if request.user.is_authenticated():
+            next = request.GET.get("next", "/")
+            return HttpResponseRedirect(next)
+        return f(request, **kwargs)
+    return decorated
+
+@not_authenticated
 def signin(request):
     """
     signin page. It manage the legacy authentification (user/password) 
@@ -266,6 +277,7 @@ def is_association_exist(openid_url):
         is_exist = False
     return is_exist
 
+@not_authenticated
 def register(request):
     """
     register an openid.
@@ -368,7 +380,7 @@ def signin_failure(request, message):
         'form2': form_signin,
     }, context_instance=RequestContext(request))
 
-
+@not_authenticated
 def signup(request):
     """
     signup page. Create a legacy account
@@ -427,6 +439,7 @@ def signup(request):
         'action_signin': action_signin,
         }, context_instance=RequestContext(request))
 
+@login_required
 def signout(request):
     """
     signout from the website. Remove openid from session and kill it.
@@ -444,8 +457,8 @@ def signout(request):
     logout(request)
     
     return HttpResponseRedirect(next)
-signout = login_required(signout)
 
+@login_required
 def account_settings(request):
     """
     index pages to changes some basic account settings :
@@ -474,8 +487,8 @@ def account_settings(request):
         'settings_path': request.path, 
         'is_openid': is_openid
         }, context_instance=RequestContext(request))
-account_settings = login_required(account_settings)
 
+@login_required
 def changepw(request):
     """
     change password view.
@@ -501,8 +514,8 @@ def changepw(request):
 
     return render('authopenid/changepw.html', {'form': form },
                                 context_instance=RequestContext(request))
-changepw = login_required(changepw)
 
+@login_required
 def changeemail(request):
     """ 
     changeemail view. It require password or openid to allow change.
@@ -542,7 +555,7 @@ def changeemail(request):
         'form': form,
         'msg': msg 
         }, context_instance=RequestContext(request))
-changeemail = login_required(changeemail)
+
 
 def emailopenid_success(request, identity_url, openid_response):
     openid_ = from_openid_response(openid_response)
@@ -578,7 +591,7 @@ def emailopenid_failure(request, message):
             reverse('user_changeemail'), urlquote_plus(message))
     return HttpResponseRedirect(redirect_to)
  
-
+@login_required
 def changeopenid(request):
     """
     change openid view. Allow user to change openid 
@@ -619,7 +632,6 @@ def changeopenid(request):
         'has_openid': has_openid, 
         'msg': msg 
         }, context_instance=RequestContext(request))
-changeopenid = login_required(changeopenid)
 
 def changeopenid_success(request, identity_url, openid_response):
     openid_ = from_openid_response(openid_response)
@@ -660,7 +672,7 @@ def changeopenid_failure(request, message):
             urlquote_plus(message))
     return HttpResponseRedirect(redirect_to)
   
-
+@login_required
 def delete(request):
     """
     delete view. Allow user to delete its account. Password/openid are required to 
@@ -696,7 +708,6 @@ def delete(request):
         'form': form, 
         'msg': msg, 
         }, context_instance=RequestContext(request))
-delete = login_required(delete)
 
 def deleteopenid_success(request, identity_url, openid_response):
     openid_ = from_openid_response(openid_response)
