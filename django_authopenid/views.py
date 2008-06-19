@@ -183,10 +183,6 @@ def signin(request):
     if not next or not is_valid_next_url(next):
         next = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
 
-    if request.user.is_authenticated():
-        return HttpResponseRedirect(next)
-
-
     form_signin = OpenidSigninForm(initial={'next':next})
     form_auth = OpenidAuthForm(initial={'next':next})
 
@@ -397,9 +393,6 @@ def signup(request):
 
     form = RegistrationForm(initial={'next':next})
     form_signin = OpenidSigninForm(initial={'next':next})
-
-    if request.user.is_authenticated():
-        return HttpResponseRedirect(next)
     
     if request.POST:
         form = RegistrationForm(request.POST)
