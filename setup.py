@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -
 #
-try:
-    from setuptools import setup
-except ImportError:
-    from distutils.core import setup
+from setuptools import setup
+
 
 import os
 import sys
@@ -19,7 +17,7 @@ setup(
     author_email = 'bchesneau@gmail.com',
     license = 'BSD',
     url = 'http://code.google.com/p/django-authopenid/',
-    zip_safe = True,
+    zip_safe = False,
 
     classifiers = [
         'Development Status :: 4 - Beta',

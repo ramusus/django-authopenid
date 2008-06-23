@@ -160,7 +160,7 @@ def not_authenticated(func):
         if request.user.is_authenticated():
             next = request.GET.get("next", "/")
             return HttpResponseRedirect(next)
-        return f(request, **kwargs)
+        return func(request, **kwargs)
     return decorated
 
 @not_authenticated
