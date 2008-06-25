@@ -124,7 +124,10 @@ class DjangoOpenIDStore(OpenIDStore):
 def from_openid_response(openid_response):
     """ return openid object from response """
     issued = int(time.time())
+    sreg_resp = sreg.SRegResponse.fromSuccessResponse(openid_response) \
+            or []
+    
     return OpenID(
         openid_response.identity_url, issued, openid_response.signed_fields, 
-         dict(sreg.SRegResponse.fromSuccessResponse(openid_response))
+         dict(sreg_resp)
     )
