@@ -107,8 +107,8 @@ class OpenidAuthForm(forms.Form):
                         username__exact = self.cleaned_data['username']
                 )
             except User.DoesNotExist:
-                raise forms.ValidationError(_("This username don't exist \
-                    in database. Please choose another."))
+                raise forms.ValidationError(_("This username does not exist \
+                    in our database. Please choose another."))
             return self.cleaned_data['username']
 
     def clean_password(self):
@@ -120,7 +120,7 @@ class OpenidAuthForm(forms.Form):
                     password=self.cleaned_data['password']
             )
             if self.user_cache is None:
-                raise forms.ValidationError(_("Please enter a correct \
+                raise forms.ValidationError(_("Please enter a valid \
                     username and password. Note that both fields are \
                     case-sensitive."))
             elif self.user_cache.is_active == False:
@@ -218,7 +218,7 @@ class OpenidVerifyForm(forms.Form):
                     password = self.cleaned_data['password']
             )
             if self.user_cache is None:
-                raise forms.ValidationError(_("Please enter a correct \
+                raise forms.ValidationError(_("Please enter a valid \
                     username and password. Note that both fields are \
                     case-sensitive."))
             elif self.user_cache.is_active == False:
@@ -309,8 +309,8 @@ class ChangepwForm(forms.Form):
     def clean_oldpw(self):
         """ test old password """
         if not self.user.check_password(self.cleaned_data['oldpw']):
-            raise forms.ValidationError(_("Old password is wrong. \
-                    Please enter a valid password."))
+            raise forms.ValidationError(_("Old password is incorrect. \
+                    Please enter the correct password."))
         return self.cleaned_data['oldpw']
     
     def clean_password2(self):
@@ -321,7 +321,7 @@ class ChangepwForm(forms.Form):
                 'password2' in self.cleaned_data and \
            self.cleaned_data['password1'] == self.cleaned_data['password2']:
             return self.cleaned_data['password2']
-        raise forms.ValidationError(_("new passwords do not match each other"))
+        raise forms.ValidationError(_("new passwords do not match"))
         
         
 class ChangeemailForm(forms.Form):

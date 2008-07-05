@@ -6,7 +6,7 @@ Username: {{ username }}
 Password: {{ password }}
 
 
-You could sign in  with this url:
+You may sign in here:
 {{ site_url }}signin/
 
 

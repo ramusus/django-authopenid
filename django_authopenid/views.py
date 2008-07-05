@@ -128,7 +128,7 @@ def complete(request, on_success=None, on_failure=None, return_to=None):
         return on_success(request, openid_response.identity_url,
                 openid_response)
     elif openid_response.status == CANCEL:
-        return on_failure(request, 'The request was cancelled')
+        return on_failure(request, 'The request was canceled')
     elif openid_response.status == FAILURE:
         return on_failure(request, openid_response.message)
     elif openid_response.status == SETUP_NEEDED:
@@ -560,11 +560,11 @@ def emailopenid_success(request, identity_url, openid_response):
         )
     except:
         return emailopenid_failure(request, 
-                _("No openid % associated in our database" % identity_url))
+                _("No OpenID %s found associated in our database" % identity_url))
 
     if uassoc.user.username != request.user.username:
         return emailopenid_failure(request, 
-                _("The openid %s isn't associated to current logged user" % 
+                _("The OpenID %s isn't associated to current user logged in" % 
                     identity_url))
     
     new_email = request.session.get('new_email', '')
@@ -647,12 +647,12 @@ def changeopenid_success(request, identity_url, openid_response):
             uassoc.save()
     elif uassoc.user.username != request.user.username:
         return changeopenid_failure(request, 
-                _('This openid is already associated with another account.'))
+                _('This OpenID is already associated with another account.'))
 
     request.session['openids'] = []
     request.session['openids'].append(openid_)
 
-    msg = _("Openid %s associated with your account." % identity_url) 
+    msg = _("OpenID %s is now associated with your account." % identity_url) 
     redirect = "%s?msg=%s" % (
             reverse('user_account_settings'), 
             urlquote_plus(msg))
@@ -712,14 +712,14 @@ def deleteopenid_success(request, identity_url, openid_response):
         )
     except:
         return deleteopenid_failure(request,
-                _("No openid % associated in our database" % identity_url))
+                _("No OpenID %s found associated in our database" % identity_url))
 
     if uassoc.user.username == user_.username:
         user_.delete()
         return signout(request)
     else:
         return deleteopenid_failure(request,
-                _("The openid %s isn't associated to current logged user" % 
+                _("The OpenID %s isn't associated to current user logged in" % 
                     identity_url))
     
     msg = _("Account deleted.") 
@@ -762,7 +762,7 @@ def sendpw(request):
             uqueue.save()
             # send email 
             current_domain = Site.objects.get_current().domain
-            subject = _("Request for a new password")
+            subject = _("Request for new password")
             message_template = loader.get_template(
                     'authopenid/sendpw_email.txt')
             message_context = Context({ 
@@ -775,7 +775,7 @@ def sendpw(request):
             message = message_template.render(message_context)
             send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, 
                     [form.user_cache.email])
-            msg = _("A new password has been sent to your email")
+            msg = _("A new password has been sent to your email address.")
     else:
         form = EmailPasswordForm()
         
@@ -805,8 +805,8 @@ def confirmchangepw(request):
                 confirm_key__exact=confirm_key
         )
     except:
-        msg = _("Can not change password. Confirmation key '%s'\
-                isn't registered." % confirm_key) 
+        msg = _("Could not change password. Confirmation key '%s'\
+                is not registered." % confirm_key) 
         redirect = "%s?msg=%s" % (
                 reverse('user_sendpw'), urlquote_plus(msg))
         return HttpResponseRedirect(redirect)
@@ -823,7 +823,7 @@ def confirmchangepw(request):
     user_.set_password(uqueue.new_password)
     user_.save()
     uqueue.delete()
-    msg = _("Password changed for %s. You could now sign-in" % 
+    msg = _("Password changed for %s. You may now sign in." % 
             user_.username) 
     redirect = "%s?msg=%s" % (reverse('user_signin'), 
                                         urlquote_plus(msg))
