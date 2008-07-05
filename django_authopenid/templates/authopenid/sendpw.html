@@ -6,7 +6,7 @@
 {% block content %}
 <h4 class="headblue">{% trans "Account: Send a new password" %}</h4>
 
-<p class="settings-descr">{% blocktrans %}Lost your password ? Here you can ask to reset your password. Enter the username you use  and you will get a confirm mail with your new password. This new password will be activated only after you clicked on the link you will find in the email{% endblocktrans %}</p>
+<p class="settings-descr">{% blocktrans %}Lost your password ? Here you can ask to reset your password. Enter the username you use  and you will get a confirmation email with your new password. This new password will be activated only after you have clicked on the link in the email.{% endblocktrans %}</p>
 {% if form.errors %}
 <p class="errors">{% trans "Please correct errors below:" %}<br />
 	{% if form.username.errors %} 
