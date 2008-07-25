@@ -38,6 +38,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
+from django.utils.encoding import smart_unicode
 from django.utils.html import escape
 from django.utils.translation import ugettext as _
 from django.contrib.sites.models import Site
@@ -121,8 +122,10 @@ def complete(request, on_success=None, on_failure=None, return_to=None):
     on_failure = on_failure or default_on_failure
     
     consumer = Consumer(request.session, DjangoOpenIDStore())
-    openid_response = consumer.complete(dict(request.GET.items()),
-            return_to)
+    # make sure params are encoded in utf8
+    params = dict((k,smart_unicode(v)) for k, v in request.GET.items())
+    openid_response = consumer.complete(params, return_to)
+            
     
     if openid_response.status == SUCCESS:
         return on_success(request, openid_response.identity_url,
