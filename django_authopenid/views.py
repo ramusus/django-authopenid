@@ -81,14 +81,14 @@ def get_full_url(request):
     host = escape(request.META['HTTP_HOST'])
     return get_url_host(request) + request.get_full_path()
 
-next_url_re = re.compile('^/[-\w/]+$')
-
-def is_valid_next_url(next):
-    # When we allow this:
-    #   /openid/?next=/welcome/
-    # For security reasons we want to restrict the next= bit 
-    # to being a local path, not a complete URL.
-    return bool(next_url_re.match(next))
+DEFAULT_NEXT = getattr(settings, 'OPENID_REDIRECT_NEXT', '')
+def clean_next(next):
+    if next is None:
+        return DEFAULT_NEXT
+    next = next.strip()
+    if next.startswith('/'):
+        return next
+    return DEFAULT_NEXT
 
 def ask_openid(request, openid_url, redirect_to, on_failure=None,
         sreg_request=None):
@@ -141,12 +141,7 @@ def complete(request, on_success=None, on_failure=None, return_to=None):
 def default_on_success(request, identity_url, openid_response):
     """ default action on openid signin success """
     request.session['openid'] = from_openid_response(openid_response)
-    
-    next = request.GET.get('next', '').strip()
-    if not next or not is_valid_next_url(next):
-        next = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
-    
-    return HttpResponseRedirect(next)
+    return HttpResponseRedirect(clean_next(request.GET.get('next')))
 
 def default_on_failure(request, message):
     """ default failure action on signin """
@@ -177,13 +172,7 @@ def signin(request):
     """
 
     on_failure = signin_failure
-    next = ''
-
-
-    if request.GET.get('next') and is_valid_next_url(request.GET['next']):
-        next = request.GET.get('next', '').strip()
-    if not next or not is_valid_next_url(next):
-        next = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
+    next = clean_next(request.GET.get('next'))
 
     form_signin = OpenidSigninForm(initial={'next':next})
     form_auth = OpenidAuthForm(initial={'next':next})
@@ -192,10 +181,7 @@ def signin(request):
         if 'bsignin' in request.POST.keys():
             form_signin = OpenidSigninForm(request.POST)
             if form_signin.is_valid():
-                next = form_signin.cleaned_data['next']
-                if not next:
-                    next = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
-
+                next = clean_next(form_signin.cleaned_data.get('next'))
                 sreg_req = sreg.SRegRequest(optional=['nickname', 'email'])
                 redirect_to = "%s%s?%s" % (
                         get_url_host(request),
@@ -215,10 +201,7 @@ def signin(request):
             if form_auth.is_valid():
                 user_ = form_auth.get_user()
                 login(request, user_)
-
-                next = form_auth.cleaned_data['next']
-                if not next:
-                    next = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
+                next = clean_next(form_auth.cleaned_data.get('next'))
                 return HttpResponseRedirect(next)
 
 
@@ -248,7 +231,6 @@ def signin_success(request, identity_url, openid_response):
 
     openid_ = from_openid_response(openid_response)
     request.session['openid'] = openid_
-
     try:
         rel = UserAssociation.objects.get(openid_url__exact = str(openid_))
     except:
@@ -258,11 +240,8 @@ def signin_success(request, identity_url, openid_response):
     if user_.is_active:
         user_.backend = "django.contrib.auth.backends.ModelBackend"
         login(request, user_)
-
-    next = request.GET.get('next', '').strip()
-    if not next or not is_valid_next_url(next):
-        next = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
-    
+        
+    next = clean_next(request.GET.get('next'))
     return HttpResponseRedirect(next)
 
 def is_association_exist(openid_url):
@@ -291,11 +270,7 @@ def register(request):
     """
 
     is_redirect = False
-    next = request.GET.get('next', '').strip()
-    if not next or not is_valid_next_url(next):
-        next = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
-
-
+    next = clean_next(request.GET.get('next'))
     openid_ = request.session.get('openid', None)
     if not openid_:
         return HttpResponseRedirect(reverse('user_signin') + next)
@@ -318,9 +293,7 @@ def register(request):
         if 'bnewaccount' in request.POST.keys():
             form1 = OpenidRegisterForm(request.POST)
             if form1.is_valid():
-                next = form1.cleaned_data['next']
-                if not next:
-                    next = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
+                next = clean_next(form1.cleaned_data.get('next'))
                 is_redirect = True
                 tmp_pwd = User.objects.make_random_password()
                 user_ = User.objects.create_user(form1.cleaned_data['username'],
@@ -338,9 +311,7 @@ def register(request):
             form2 = OpenidVerifyForm(request.POST)
             if form2.is_valid():
                 is_redirect = True
-                next = form2.cleaned_data['next']
-                if not next:
-                    next = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
+                next = clean_next(form2.cleaned_data.get('next'))
                 user_ = form2.get_user()
 
                 uassoc = UserAssociation(openid_url=str(openid_),
@@ -365,8 +336,7 @@ def signin_failure(request, message):
 
     template : "authopenid/signin.html"
     """
-    next = request.REQUEST.get('next', '')
-
+    next = clean_next(request.GET.get('next'))
     form_signin = OpenidSigninForm(initial={'next': next})
     form_auth = OpenidAuthForm(initial={'next': next})
 
@@ -386,21 +356,14 @@ def signup(request):
     templates: authopenid/signup.html, authopenid/confirm_email.txt
     """
     action_signin = reverse('user_signin')
-
-    next = request.GET.get('next', '')
-    if not next or not is_valid_next_url(next):
-        next = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
-
+    next = clean_next(request.GET.get('next'))
     form = RegistrationForm(initial={'next':next})
     form_signin = OpenidSigninForm(initial={'next':next})
     
     if request.POST:
         form = RegistrationForm(request.POST)
         if form.is_valid():
-            next = form.cleaned_data.get('next', '')
-            if not next or not is_valid_next_url(next):
-                next = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
-
+            next = clean_next(form.cleaned_data.get('next'))
             user_ = User.objects.create_user( form.cleaned_data['username'],
                     form.cleaned_data['email'], form.cleaned_data['password1'])
            
