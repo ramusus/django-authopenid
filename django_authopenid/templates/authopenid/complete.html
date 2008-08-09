@@ -44,7 +44,7 @@
 	{% endif %}
 
 	<div class="login">
-        <form name="fregister" action="{{ action }}" method="POST">
+        <form name="fregister" action="{% url user_register %}" method="POST">
             {{ form.next }}
 			<fieldset>
 				<legend>{% trans "A new account" %}</legend>
@@ -60,7 +60,7 @@
 
 	<div class="login">
 		<h3></h3>
-        <form name="fverify" action="{{ action }}" method="POST">
+        <form name="fverify" action="{% url user_register %}" method="POST">
             {{ form.next }}
 			<fieldset>
 				<legend>{% trans "An exisiting account" %}</legend>

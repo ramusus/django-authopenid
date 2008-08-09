@@ -24,7 +24,7 @@
 {% endif %}
 <div class="login">
 
-    <form name="fauth" action="{{ action }}" method="post">
+    <form name="fauth" action="{% url user_signin %}" method="post">
         {{ form1.next }}
 	<fieldset>
 		<legend>{% trans "Sign In Using Your Account ID" %}</legend>
@@ -36,7 +36,7 @@
 </form>
 
 <br />
-<form name="fopenid" action="{{ action }}" method="post">
+<form name="fopenid" action="{% url user_signin %}" method="post">
     {{ form2.next }}
 	<fieldset>
 		<legend>{% trans "Sign In Using Your OpenID URL" %}</legend>

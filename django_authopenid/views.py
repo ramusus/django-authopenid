@@ -225,7 +225,6 @@ def signin(request):
     return render('authopenid/signin.html', {
         'form1': form_auth,
         'form2': form_signin,
-        'action': request.path,
         'msg':  request.GET.get('msg',''),
         'sendpw_url': reverse('user_sendpw'),
     }, context_instance=RequestContext(request))
@@ -356,7 +355,6 @@ def register(request):
     return render('authopenid/complete.html', {
         'form1': form1,
         'form2': form2,
-        'action': reverse('user_register'),
         'nickname': nickname,
         'email': email
     }, context_instance=RequestContext(request))
@@ -429,8 +427,6 @@ def signup(request):
     return render('authopenid/signup.html', {
         'form': form,
         'form2': form_signin,
-        'action': request.path,
-        'action_signin': action_signin,
         }, context_instance=RequestContext(request))
 
 @login_required
@@ -486,8 +482,7 @@ def account_settings(request):
 
 
     return render('authopenid/settings.html', {
-        'msg': msg, 
-        'settings_path': request.path, 
+        'msg': msg,
         'is_openid': is_openid
         }, context_instance=RequestContext(request))
 
