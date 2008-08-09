@@ -81,7 +81,7 @@ def get_full_url(request):
     host = escape(request.META['HTTP_HOST'])
     return get_url_host(request) + request.get_full_path()
 
-DEFAULT_NEXT = getattr(settings, 'OPENID_REDIRECT_NEXT', '')
+DEFAULT_NEXT = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
 def clean_next(next):
     if next is None:
         return DEFAULT_NEXT
