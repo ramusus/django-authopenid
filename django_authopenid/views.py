@@ -59,9 +59,9 @@ import re
 import urllib
 
 
-from util import OpenID, DjangoOpenIDStore, from_openid_response
-from models import UserAssociation, UserPasswordQueue
-from forms import OpenidSigninForm, OpenidAuthForm, OpenidRegisterForm, \
+from django_authopenid.util import OpenID, DjangoOpenIDStore, from_openid_response
+from django_authopenid.models import UserAssociation, UserPasswordQueue
+from django_authopenid.forms import OpenidSigninForm, OpenidAuthForm, OpenidRegisterForm, \
         OpenidVerifyForm, RegistrationForm, ChangepwForm, ChangeemailForm, \
         ChangeopenidForm, DeleteForm, EmailPasswordForm
 
@@ -93,7 +93,6 @@ def is_valid_next_url(next):
 def ask_openid(request, openid_url, redirect_to, on_failure=None,
         sreg_request=None):
     """ basic function to ask openid and return response """
-
     on_failure = on_failure or signin_failure
     
     trust_root = getattr(
@@ -400,7 +399,6 @@ def signup(request):
     if request.POST:
         form = RegistrationForm(request.POST)
         if form.is_valid():
-
             next = form.cleaned_data.get('next', '')
             if not next or not is_valid_next_url(next):
                 next = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
@@ -453,6 +451,15 @@ def signout(request):
     logout(request)
     
     return HttpResponseRedirect(next)
+    
+def xrdf(request):
+    url_host = get_url_host(request)
+    return_to = [
+        "%s%s" % (url_host, reverse('user_complete_signin'))
+    ]
+    return render('authopenid/yadis.xrdf', { 
+        'return_to': return_to 
+        }, context_instance=RequestContext(request))
 
 @login_required
 def account_settings(request):
