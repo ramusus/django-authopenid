@@ -25,7 +25,7 @@
     </p>
     {% endif %}
 </div>
-    <form action="{{ action }}" method="post" accept-charset="utf-8">	
+    <form action="{% url user_signup %}" method="post" accept-charset="utf-8">	
         <div class="form-row"><label for="id_username">{% trans "Choose a Screen Name:" %}</label><br />{{ form.username }}</div>
 
         <div class="form-row"><label for="id_email">{% trans "Enter Your Email Address:" %}</label><br />{{ form.email }}</div>
@@ -37,7 +37,7 @@
     </form>
 <br />
     <h2 class="signup">{% trans "OpenID Signup" %}</h2>
-    <form name="fopenid" action="{{ action_signin }}" method="post">
+    <form name="fopenid" action="{% url user_signin %}" method="post">
         <div class="form-row">{{ form2.openid_url }}</div>
         <div class="submit-row "><input name="bsignin" type="submit" value="{% trans "Sign in with OPENID" %}"></div>
     </form>
