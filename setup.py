@@ -9,7 +9,7 @@ import sys
 
 setup(
     name = 'django-authopenid',
-    version = '0.9.5',
+    version = '0.9.6',
     description = 'Openid authentification application for Django',
     long_description = \
 """Django authentification application with openid using django auth contrib. Rhis application allow a user to connect to you website with a legacy account (username/password) or an openid url.""",
