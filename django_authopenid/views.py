@@ -74,11 +74,6 @@ def get_url_host(request):
     return '%s://%s' % (protocol, host)
 
 def get_full_url(request):
-    if request.is_secure():
-        protocol = 'https'
-    else:
-        protocol = 'http'
-    host = escape(request.META['HTTP_HOST'])
     return get_url_host(request) + request.get_full_path()
 
 DEFAULT_NEXT = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
