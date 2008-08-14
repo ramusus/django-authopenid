@@ -398,10 +398,7 @@ def signout(request):
         del request.session['openid']
     except KeyError:
         pass
-    next = request.GET.get('next', '/')
-    if not is_valid_next_url(next):
-        next = '/'
-
+    next = clean_next(next)
     logout(request)
     
     return HttpResponseRedirect(next)
