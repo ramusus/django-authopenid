@@ -398,7 +398,7 @@ def signout(request):
         del request.session['openid']
     except KeyError:
         pass
-    next = clean_next(next)
+    next = clean_next(request.GET.get('next'))
     logout(request)
     
     return HttpResponseRedirect(next)
