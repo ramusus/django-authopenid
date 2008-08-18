@@ -109,6 +109,10 @@ class OpenidAuthForm(forms.Form):
             except User.DoesNotExist:
                 raise forms.ValidationError(_("This username does not exist \
                     in our database. Please choose another."))
+            except User.MultipleObjectsReturned:
+                raise forms.ValidationError(u'There is already more than one \
+                    account registered with that username. Please try \
+                    another.')
             return self.cleaned_data['username']
 
     def clean_password(self):
@@ -165,6 +169,10 @@ class OpenidRegisterForm(forms.Form):
                         )
             except User.DoesNotExist:
                 return self.cleaned_data['username']
+            except User.MultipleObjectsReturned:
+                raise forms.ValidationError(u'There is already more than one \
+                    account registered with that username. Please try \
+                    another.')
             raise forms.ValidationError(_("This username is already \
                 taken. Please choose another."))
             
@@ -175,6 +183,10 @@ class OpenidRegisterForm(forms.Form):
                 user = User.objects.get(email = self.cleaned_data['email'])
             except User.DoesNotExist:
                 return self.cleaned_data['email']
+            except User.MultipleObjectsReturned:
+                raise forms.ValidationError(u'There is already more than one \
+                    account registered with that e-mail address. Please try \
+                    another.')
             raise forms.ValidationError(_("This email is already \
                 registered in our database. Please choose another."))
  
@@ -207,6 +219,10 @@ class OpenidVerifyForm(forms.Form):
             except User.DoesNotExist:
                 raise forms.ValidationError(_("This username don't exist. \
                         Please choose another."))
+            except User.MultipleObjectsReturned:
+                raise forms.ValidationError(u'Somehow, that username is in \
+                    use for multiple accounts. Please contact us to get this \
+                    problem resolved.')
             return self.cleaned_data['username']
             
     def clean_password(self):
@@ -265,6 +281,10 @@ class RegistrationForm(forms.Form):
 
             except User.DoesNotExist:
                 return self.cleaned_data['username']
+            except User.MultipleObjectsReturned:
+                raise forms.ValidationError(u'Somehow, that username is in \
+                    use for multiple accounts. Please contact us to get this \
+                    problem resolved.')
             raise forms.ValidationError(u'This username is already taken. \
                     Please choose another.')
 
@@ -276,6 +296,10 @@ class RegistrationForm(forms.Form):
                 user = User.objects.get(email = self.cleaned_data['email'])
             except User.DoesNotExist:
                 return self.cleaned_data['email']
+            except User.MultipleObjectsReturned:
+                raise forms.ValidationError(u'There is already more than one \
+                    account registered with that e-mail address. Please try \
+                    another.')
             raise forms.ValidationError(u'This email is already registered \
                     in our database. Please choose another.')
         return self.cleaned_data['email']
