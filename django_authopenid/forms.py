@@ -362,6 +362,24 @@ class ChangeemailForm(forms.Form):
                 prefix, initial)
         self.test_openid = False
         self.user = user
+        
+        
+    def clean_email(self):
+        """ check if email don't exist """
+        if 'email' in self.cleaned_data:
+            if self.user.email != self.cleaned_data['email']:
+                try:
+                    user = User.objects.get(email = self.cleaned_data['email'])
+                except User.DoesNotExist:
+                    return self.cleaned_data['email']
+                except User.MultipleObjectsReturned:
+                    raise forms.ValidationError(u'There is already more than one \
+                        account registered with that e-mail address. Please try \
+                        another.')
+                raise forms.ValidationError(u'This email is already registered \
+                    in our database. Please choose another.')
+        return self.cleaned_data['email']
+        
 
     def clean_password(self):
         """ check if we have to test a legacy account or not """
