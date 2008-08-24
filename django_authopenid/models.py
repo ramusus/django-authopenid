@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from django.conf import settings
-from django.contrib import admin
 from django.contrib.auth.models import User
 from django.db import models
 
@@ -40,10 +39,6 @@ class UserAssociation(models.Model):
     
     def __unicode__(self):
         return "Openid %s with user %s" % (self.openid_url, self.user)
-        
-class UserAssociationAdmin(admin.ModelAdmin):
-    """User association admin class"""
-admin.site.register(UserAssociation, UserAssociationAdmin)
 
 class UserPasswordQueueManager(models.Manager):
     """ manager for UserPasswordQueue object """
