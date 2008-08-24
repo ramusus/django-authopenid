@@ -4,7 +4,7 @@ from django.utils.translation import ugettext as _
 
 urlpatterns = patterns('django_authopenid.views',
     # yadis rdf
-    url(r'^yadis\.xrdf$', 'xrdf', name='yadis_xrdf'),
+    url(r'^yadis.xrdf$', 'xrdf', name='yadis_xrdf'),
      # manage account registration
     url(r'^%s$' % _('signin/'), 'signin', name='user_signin'),
     url(r'^%s$' % _('signout/'), 'signout', name='user_signout'),
