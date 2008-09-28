@@ -44,6 +44,8 @@ try:
     from openid.yadis import xri
 except ImportError:
     from yadis import xri
+    
+from django_authopenid.util import clean_next
 
 __all__ = ['OpenidSigninForm', 'OpenidAuthForm', 'OpenidVerifyForm',
         'OpenidRegisterForm', 'RegistrationForm', 'ChangepwForm',
@@ -70,10 +72,7 @@ class OpenidSigninForm(forms.Form):
     def clean_next(self):
         """ validate next """
         if 'next' in self.cleaned_data and self.cleaned_data['next'] != "":
-            next_url_re = re.compile('^/[-\w/]*$')
-            if not next_url_re.match(self.cleaned_data['next']):
-                raise forms.ValidationError(_('next url "%s" is invalid' % 
-                    self.cleaned_data['next']))
+            self.cleaned_data['next'] = clean_next(self.cleaned_data['next'])
             return self.cleaned_data['next']
 
 
@@ -135,12 +134,7 @@ class OpenidAuthForm(forms.Form):
         """ validate next url """
         if 'next' in self.cleaned_data and \
                 self.cleaned_data['next'] != "":
-            next_url_re = re.compile('^/[-\w/]*$')
-            if not next_url_re.match(self.cleaned_data['next']):
-                raise forms.ValidationError(
-                        _('next url "%s" is invalid' % 
-                            self.cleaned_data['next'])
-                )
+            self.cleaned_data['next'] = clean_next(self.cleaned_data['next'])
             return self.cleaned_data['next']
             
     def get_user(self):
