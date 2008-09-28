@@ -6,6 +6,7 @@ import openid.store
 
 from django.db.models.query import Q
 from django.conf import settings
+from django.http import str_to_unicode
 
 
 # needed for some linux distributions like debian
@@ -15,10 +16,21 @@ except:
     from yadis import xri
 
 import time, base64, md5, operator
+import urllib
 
 from models import Association, Nonce
 
-__all__ = ['OpenID', 'DjangoOpenIDStore', 'from_openid_response']
+__all__ = ['OpenID', 'DjangoOpenIDStore', 'from_openid_response', 'clean_next']
+
+DEFAULT_NEXT = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
+def clean_next(next):
+    if next is None:
+        return DEFAULT_NEXT
+    next = str_to_unicode(urllib.unquote(next), 'utf-8')
+    next = next.strip()
+    if next.startswith('/'):
+        return next
+    return DEFAULT_NEXT
 
 class OpenID:
     def __init__(self, openid_, issued, attrs=None, sreg_=None):

@@ -59,7 +59,7 @@ import re
 import urllib
 
 
-from django_authopenid.util import OpenID, DjangoOpenIDStore, from_openid_response
+from django_authopenid.util import OpenID, DjangoOpenIDStore, from_openid_response, clean_next
 from django_authopenid.models import UserAssociation, UserPasswordQueue
 from django_authopenid.forms import OpenidSigninForm, OpenidAuthForm, OpenidRegisterForm, \
         OpenidVerifyForm, RegistrationForm, ChangepwForm, ChangeemailForm, \
@@ -76,14 +76,7 @@ def get_url_host(request):
 def get_full_url(request):
     return get_url_host(request) + request.get_full_path()
 
-DEFAULT_NEXT = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
-def clean_next(next):
-    if next is None:
-        return DEFAULT_NEXT
-    next = next.strip()
-    if next.startswith('/'):
-        return next
-    return DEFAULT_NEXT
+
 
 def ask_openid(request, openid_url, redirect_to, on_failure=None,
         sreg_request=None):
