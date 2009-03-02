@@ -41,6 +41,7 @@ from django.core.urlresolvers import reverse
 from django.utils.encoding import smart_unicode
 from django.utils.html import escape
 from django.utils.translation import ugettext as _
+from django.utils.functional import curry
 from django.contrib.sites.models import Site
 from django.utils.http import urlquote_plus
 from django.core.mail import send_mail
@@ -103,9 +104,13 @@ def ask_openid(request, openid_url, redirect_to, on_failure=None,
     redirect_url = auth_request.redirectURL(trust_root, redirect_to)
     return HttpResponseRedirect(redirect_url)
 
-def complete(request, on_success=None, on_failure=None, return_to=None):
+def complete(request, on_success=None, on_failure=None, return_to=None,
+             success_template=None):
     """ complete openid signin """
+    if on_success:
+        on_success = curry(on_success, success_template=success_template)
     on_success = on_success or default_on_success
+    
     on_failure = on_failure or default_on_failure
     
     consumer = Consumer(request.session, DjangoOpenIDStore())
@@ -149,25 +154,26 @@ def not_authenticated(func):
     return decorated
 
 @not_authenticated
-def signin(request):
+def signin(request, openid_form=OpenidSigninForm, auth_form=OpenidAuthForm,
+           template='authopenid/signin.html'):
     """
     signin page. It manage the legacy authentification (user/password) 
     and authentification with openid.
 
     url: /signin/
     
-    template : authopenid/signin.htm
+    template : authopenid/signin.html
     """
 
     on_failure = signin_failure
     next = clean_next(request.GET.get('next'))
 
-    form_signin = OpenidSigninForm(initial={'next':next})
-    form_auth = OpenidAuthForm(initial={'next':next})
+    form_signin = openid_form(initial={'next':next})
+    form_auth = openid_form(initial={'next':next})
 
     if request.POST:   
         if 'bsignin' in request.POST.keys():
-            form_signin = OpenidSigninForm(request.POST)
+            form_signin = openid_form(request.POST)
             if form_signin.is_valid():
                 next = clean_next(form_signin.cleaned_data.get('next'))
                 sreg_req = sreg.SRegRequest(optional=['nickname', 'email'])
@@ -185,7 +191,7 @@ def signin(request):
 
         elif 'blogin' in request.POST.keys():
             # perform normal django authentification
-            form_auth = OpenidAuthForm(request.POST)
+            form_auth = auth_form(request.POST)
             if form_auth.is_valid():
                 user_ = form_auth.get_user()
                 login(request, user_)
@@ -193,20 +199,22 @@ def signin(request):
                 return HttpResponseRedirect(next)
 
 
-    return render('authopenid/signin.html', {
+    return render(template, {
         'form1': form_auth,
         'form2': form_signin,
         'msg':  request.GET.get('msg',''),
         'sendpw_url': reverse('user_sendpw'),
     }, context_instance=RequestContext(request))
 
-def complete_signin(request):
+
+def complete_signin(request, template=None):
     """ in case of complete signin with openid """
     return complete(request, signin_success, signin_failure,
-            get_url_host(request) + reverse('user_complete_signin'))
+            get_url_host(request) + reverse('user_complete_signin'),
+            success_template=template)
 
 
-def signin_success(request, identity_url, openid_response):
+def signin_success(request, identity_url, openid_response, success_template=None):
     """
     openid signin success.
 
@@ -223,7 +231,7 @@ def signin_success(request, identity_url, openid_response):
         rel = UserAssociation.objects.get(openid_url__exact = str(openid_))
     except:
         # try to register this new user
-        return register(request)
+        return register(request, template=success_template)
     user_ = rel.user
     if user_.is_active:
         user_.backend = "django.contrib.auth.backends.ModelBackend"
@@ -242,7 +250,7 @@ def is_association_exist(openid_url):
     return is_exist
 
 @not_authenticated
-def register(request):
+def register(request, template=None):
     """
     register an openid.
 
@@ -256,7 +264,8 @@ def register(request):
 
     template : authopenid/complete.html
     """
-
+    if not template:
+        template = 'authopenid/complete.html'
     is_redirect = False
     next = clean_next(request.GET.get('next'))
     openid_ = request.session.get('openid', None)
@@ -311,7 +320,7 @@ def register(request):
         if is_redirect:
             return HttpResponseRedirect(next) 
     
-    return render('authopenid/complete.html', {
+    return render(template, {
         'form1': form1,
         'form2': form2,
         'nickname': nickname,
