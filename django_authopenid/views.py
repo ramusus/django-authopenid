@@ -250,7 +250,7 @@ def is_association_exist(openid_url):
     return is_exist
 
 @not_authenticated
-def register(request, template=None):
+def register(request, template='authopenid/complete.html'):
     """
     register an openid.
 
@@ -264,8 +264,7 @@ def register(request, template=None):
 
     template : authopenid/complete.html
     """
-    if not template:
-        template = 'authopenid/complete.html'
+    
     is_redirect = False
     next = clean_next(request.GET.get('next'))
     openid_ = request.session.get('openid', None)
