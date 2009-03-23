@@ -137,20 +137,19 @@ def signin(request, template_name='authopenid/signin.html', redirect_field_name=
     """
     on_failure = signin_failure
     redirect_to = request.REQUEST.get(redirect_field_name, '')
-    form1 = signin_form()
+    form1 = openid_form()
     form2 = auth_form()
     if request.POST:
         if not redirect_to or '//' in redirect_to or ' ' in redirect_to:
-            redirect_to = settings.LOGIN_REDIRECT_URL
-            
+            redirect_to = settings.LOGIN_REDIRECT_URL     
         if 'bsignin' in request.POST.keys():
-            form1 = OpenidSigninForm(data=request.POST)
+            form1 = openid_form(data=request.POST)
             if form1.is_valid():
                 sreg_req = sreg.SRegRequest(optional=['nickname', 'email'])
                 redirect_url = "%s%s?%s" % (
                         get_url_host(request),
                         reverse('user_complete_signin'), 
-                        urllib.urlencode({ REDIRECT_FIELD_NAME: redirect_to })
+                        urllib.urlencode({ redirect_field_name: redirect_to })
                 )
                 return ask_openid(request, 
                         form1.cleaned_data['openid_url'], 
@@ -213,9 +212,18 @@ def is_association_exist(openid_url):
     except:
         is_exist = False
     return is_exist
+    
+def register_account(form):
+    tmp_pwd = User.objects.make_random_password()
+    user_ = User.objects.create_user(form.cleaned_data['username'],
+             form.cleaned_data['email'], tmp_pwd)
+    user_.backend = "django.contrib.auth.backends.ModelBackend"
+    return user_
 
 @not_authenticated
-def register(request, template_name='authopenid/complete.html'):
+def register(request, template_name='authopenid/complete.html', 
+            redirect_field_name=REDIRECT_FIELD_NAME, register_form=OpenidRegisterForm, 
+            auth_form=AuthenticationForm, register_account=register_account):
     """
     register an openid.
 
@@ -225,64 +233,57 @@ def register(request, template_name='authopenid/complete.html'):
     A new account could also be created and automaticaly associated
     to the openid.
 
-    url : /complete/
-
-    template : authopenid/complete.html
+    :attr request: request object
+    :attr template_name: string, name of template to use, 'authopenid/complete.html' by default
+    :attr redirect_field_name: string, field name used for redirect. by default 'next'
+    :attr register_form: form use to create a new account. By default `OpenidRegisterForm`
+    :attr auth_form: form object used for legacy authentification. 
+    by default `OpenidVerifyForm` form auser auth contrib.
+    :attr register_account: callback used to create a new account from openid. 
+    It take the register_form as param.
+    
+    
     """
 
     is_redirect = False
-    next = clean_next(request.GET.get('next'))
+    redirect_to = request.REQUEST.get(redirect_field_name, '')
     openid_ = request.session.get('openid', None)
-    if not openid_:
-        return HttpResponseRedirect(reverse('user_signin') + next)
+    if openid_ is None or not openid_:
+        return HttpResponseRedirect("%s?%s" % (reverse('user_signin') ,
+                                urllib.urlencode({ redirect_field_name: redirect_to })))
 
     nickname = openid_.sreg.get('nickname', '')
     email = openid_.sreg.get('email', '')
     
-    form1 = OpenidRegisterForm(initial={
-        'next': next,
+    form1 = register_form(initial={
         'username': nickname,
         'email': email,
     }) 
-    form2 = OpenidVerifyForm(initial={
-        'next': next,
+    form2 = auth_form(initial={ 
         'username': nickname,
     })
     
     if request.POST:
-        just_completed = False
+        user_ = None
+        if not redirect_to or '//' in redirect_to or ' ' in redirect_to:
+            redirect_to = settings.LOGIN_REDIRECT_URL
         if 'bnewaccount' in request.POST.keys():
-            form1 = OpenidRegisterForm(request.POST)
+            form1 = register_form(data=request.POST)
             if form1.is_valid():
-                next = clean_next(form1.cleaned_data.get('next'))
-                is_redirect = True
-                tmp_pwd = User.objects.make_random_password()
-                user_ = User.objects.create_user(form1.cleaned_data['username'],
-                         form1.cleaned_data['email'], tmp_pwd)
-                
-                # make association with openid
-                uassoc = UserAssociation(openid_url=str(openid_),
-                        user_id=user_.id)
-                uassoc.save()
-                    
-                # login 
-                user_.backend = "django.contrib.auth.backends.ModelBackend"
-                login(request, user_)
+                user_ = register_account(form1)     
         elif 'bverify' in request.POST.keys():
-            form2 = OpenidVerifyForm(request.POST)
+            form2 = auth_form(data=request.POST)
             if form2.is_valid():
-                is_redirect = True
-                next = clean_next(form2.cleaned_data.get('next'))
                 user_ = form2.get_user()
-
-                uassoc = UserAssociation(openid_url=str(openid_),
-                        user_id=user_.id)
-                uassoc.save()
-                login(request, user_)
-        
-        # redirect, can redirect only if forms are valid.
-        if is_redirect:
-            return HttpResponseRedirect(next) 
+        if user_ is not None:
+            # associate the user to openid
+            uassoc = UserAssociation(
+                        openid_url=str(openid_),
+                        user_id=user_.id
+            )
+            uassoc.save()
+            login(request, user_)
+            return HttpResponseRedirect(redirect_to) 
     
     return render(template_name, {
         'form1': form1,
@@ -290,6 +291,8 @@ def register(request, template_name='authopenid/complete.html'):
         'nickname': nickname,
         'email': email
     }, context_instance=RequestContext(request))
+
+
 
 def signin_failure(request, message, template_name='authopenid/signin.html'):
     """
