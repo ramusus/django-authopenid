@@ -1,5 +1,17 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -
+# -*- coding: utf-8 -*-
+# Copyright 2007, 2008,2009 by Benoît Chesneau <benoitc@e-engura.org>
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 from setuptools import setup
 
@@ -9,7 +21,7 @@ import sys
 
 setup(
     name = 'django-authopenid',
-    version = '0.9.6',
+    version = '1.0a',
     description = 'Openid authentification application for Django',
     long_description = \
 """Django authentification application with openid using django auth contrib. Rhis application allow a user to connect to you website with a legacy account (username/password) or an openid url.""",
