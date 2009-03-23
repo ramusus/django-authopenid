@@ -131,7 +131,7 @@ def not_authenticated(func):
     return decorated
 
 @not_authenticated
-def signin(request):
+def signin(request, template_name='authopenid/signin.html'):
     """
     signin page. It manage the legacy authentification (user/password) 
     and authentification with openid.
@@ -175,7 +175,7 @@ def signin(request):
                 return HttpResponseRedirect(next)
 
 
-    return render('authopenid/signin.html', {
+    return render(template_name, {
         'form1': form_auth,
         'form2': form_signin,
         'msg':  request.GET.get('msg',''),
@@ -224,7 +224,7 @@ def is_association_exist(openid_url):
     return is_exist
 
 @not_authenticated
-def register(request):
+def register(request, template_name='authopenid/complete.html'):
     """
     register an openid.
 
@@ -293,14 +293,14 @@ def register(request):
         if is_redirect:
             return HttpResponseRedirect(next) 
     
-    return render('authopenid/complete.html', {
+    return render(template_name, {
         'form1': form1,
         'form2': form2,
         'nickname': nickname,
         'email': email
     }, context_instance=RequestContext(request))
 
-def signin_failure(request, message):
+def signin_failure(request, message, template_name='authopenid/signin.html'):
     """
     falure with openid signin. Go back to signin page.
 
@@ -310,14 +310,14 @@ def signin_failure(request, message):
     form_signin = OpenidSigninForm(initial={'next': next})
     form_auth = OpenidAuthForm(initial={'next': next})
 
-    return render('authopenid/signin.html', {
+    return render(template_name, {
         'msg': message,
         'form1': form_auth,
         'form2': form_signin,
     }, context_instance=RequestContext(request))
 
 @not_authenticated
-def signup(request):
+def signup(request, template_name='authopenid/signup.html'):
     """
     signup page. Create a legacy account
 
@@ -357,7 +357,7 @@ def signup(request):
             
             return HttpResponseRedirect(next)
     
-    return render('authopenid/signup.html', {
+    return render(template_name='authopenid/signup.html', {
         'form': form,
         'form2': form_signin,
         }, context_instance=RequestContext(request))
@@ -378,17 +378,17 @@ def signout(request):
     
     return HttpResponseRedirect(next)
     
-def xrdf(request):
+def xrdf(request, template_name='authopenid/yadis.xrdf'):
     url_host = get_url_host(request)
     return_to = [
         "%s%s" % (url_host, reverse('user_complete_signin'))
     ]
-    return render('authopenid/yadis.xrdf', { 
+    return render(template_name, { 
         'return_to': return_to 
         }, context_instance=RequestContext(request))
 
 @login_required
-def account_settings(request):
+def account_settings(request, template_name='authopenid/settings.html'):
     """
     index pages to changes some basic account settings :
      - change password
@@ -411,13 +411,13 @@ def account_settings(request):
         is_openid = False
 
 
-    return render('authopenid/settings.html', {
+    return render(template_name='authopenid/settings.html', {
         'msg': msg,
         'is_openid': is_openid
         }, context_instance=RequestContext(request))
 
 @login_required
-def changepw(request):
+def changepw(request, template_name='authopenid/changepw.html'):
     """
     change password view.
 
@@ -440,11 +440,11 @@ def changepw(request):
     else:
         form = ChangepwForm(user=user_)
 
-    return render('authopenid/changepw.html', {'form': form },
+    return render(template_name, {'form': form },
                                 context_instance=RequestContext(request))
 
 @login_required
-def changeemail(request):
+def changeemail(request, template_name='authopenid/changeemail.html'):
     """ 
     changeemail view. It require password or openid to allow change.
 
@@ -479,7 +479,7 @@ def changeemail(request):
         form = ChangeemailForm(initial={'email': user_.email},
                 user=user_)
     
-    return render('authopenid/changeemail.html', {
+    return render(template_name, {
         'form': form,
         'msg': msg 
         }, context_instance=RequestContext(request))
@@ -520,7 +520,7 @@ def emailopenid_failure(request, message):
     return HttpResponseRedirect(redirect_to)
  
 @login_required
-def changeopenid(request):
+def changeopenid(request, template_name='authopenid/changeopenid.html'):
     """
     change openid view. Allow user to change openid 
     associated to its username.
@@ -555,7 +555,7 @@ def changeopenid(request):
                     changeopenid_failure, redirect_to)    
 
     form = ChangeopenidForm(initial={'openid_url': openid_url }, user=user_)
-    return render('authopenid/changeopenid.html', {
+    return render(template_name, {
         'form': form,
         'has_openid': has_openid, 
         'msg': msg 
@@ -601,7 +601,7 @@ def changeopenid_failure(request, message):
     return HttpResponseRedirect(redirect_to)
   
 @login_required
-def delete(request):
+def delete(request, template_name='authopenid/delete.html'):
     """
     delete view. Allow user to delete its account. Password/openid are required to 
     confirm it. He should also check the confirm checkbox.
@@ -632,7 +632,7 @@ def delete(request):
     form = DeleteForm(user=user_)
 
     msg = request.GET.get('msg','')
-    return render('authopenid/delete.html', {
+    return render(template_name, {
         'form': form, 
         'msg': msg, 
         }, context_instance=RequestContext(request))
@@ -667,7 +667,7 @@ def deleteopenid_failure(request, message):
     return HttpResponseRedirect(redirect_to)
 
 
-def sendpw(request):
+def sendpw(request, template_name='authopenid/sendpw.html'):
     """
     send a new password to the user. It return a mail with 
     a new pasword and a confirm link in. To activate the 
@@ -714,7 +714,7 @@ def sendpw(request):
     else:
         form = EmailPasswordForm()
         
-    return render('authopenid/sendpw.html', {
+    return render(template_name, {
         'form': form,
         'msg': msg 
         }, context_instance=RequestContext(request))
