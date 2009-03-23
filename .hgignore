@@ -18,6 +18,7 @@ store/*
 *egg
 django_authopenid.egg*
 dist
+*.db
 
 syntax: regexp
 .*\#.*\#$

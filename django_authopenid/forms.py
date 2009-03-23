@@ -29,15 +29,13 @@ try:
 except ImportError:
     from yadis import xri
     
-from django_authopenid.util import clean_next
+from django_authopenid.utils import clean_next
 
 class OpenidSigninForm(forms.Form):
     """ signin form """
     openid_url = forms.CharField(max_length=255, 
             widget=forms.widgets.TextInput(attrs={'class': 'required openid'}))
-    next = forms.CharField(max_length=255, widget=forms.HiddenInput(), 
-            required=False)
-
+            
     def clean_openid_url(self):
         """ test if openid is accepted """
         if 'openid_url' in self.cleaned_data:
@@ -48,78 +46,8 @@ class OpenidSigninForm(forms.Form):
                 raise forms.ValidationError(_('i-names are not supported'))
             return self.cleaned_data['openid_url']
 
-    def clean_next(self):
-        """ validate next """
-        if 'next' in self.cleaned_data and self.cleaned_data['next'] != "":
-            self.cleaned_data['next'] = clean_next(self.cleaned_data['next'])
-            return self.cleaned_data['next']
-
-
 attrs_dict = { 'class': 'required login' }
 username_re = re.compile(r'^\w+$')
-
-class OpenidAuthForm(forms.Form):
-    """ legacy account signin form """
-    next = forms.CharField(max_length=255, widget=forms.HiddenInput(), 
-            required=False)
-    username = forms.CharField(max_length=30,  
-            widget=forms.widgets.TextInput(attrs=attrs_dict))
-    password = forms.CharField(max_length=128, 
-            widget=forms.widgets.PasswordInput(attrs=attrs_dict))
-       
-    def __init__(self, data=None, files=None, auto_id='id_%s',
-            prefix=None, initial=None): 
-        super(OpenidAuthForm, self).__init__(data, files, auto_id,
-                prefix, initial)
-        self.user_cache = None
-            
-    def clean_username(self):
-        """ validate username and test if it exists."""
-        if 'username' in self.cleaned_data and \
-                'openid_url' not in self.cleaned_data:
-            if not username_re.search(self.cleaned_data['username']):
-                raise forms.ValidationError(_("Usernames can only contain \
-                    letters, numbers and underscores"))
-            try:
-                user = User.objects.get(
-                        username__exact = self.cleaned_data['username']
-                )
-            except User.DoesNotExist:
-                raise forms.ValidationError(_("This username does not exist \
-                    in our database. Please choose another."))
-            except User.MultipleObjectsReturned:
-                raise forms.ValidationError(u'There is already more than one \
-                    account registered with that username. Please try \
-                    another.')
-            return self.cleaned_data['username']
-
-    def clean_password(self):
-        """" test if password is valid for this username """
-        if 'username' in self.cleaned_data and \
-                'password' in self.cleaned_data:
-            self.user_cache =  authenticate(
-                    username=self.cleaned_data['username'], 
-                    password=self.cleaned_data['password']
-            )
-            if self.user_cache is None:
-                raise forms.ValidationError(_("Please enter a valid \
-                    username and password. Note that both fields are \
-                    case-sensitive."))
-            elif self.user_cache.is_active == False:
-                raise forms.ValidationError(_("This account is inactive."))
-            return self.cleaned_data['password']
-
-    def clean_next(self):
-        """ validate next url """
-        if 'next' in self.cleaned_data and \
-                self.cleaned_data['next'] != "":
-            self.cleaned_data['next'] = clean_next(self.cleaned_data['next'])
-            return self.cleaned_data['next']
-            
-    def get_user(self):
-        """ get authenticated user """
-        return self.user_cache
-            
 
 class OpenidRegisterForm(forms.Form):
     """ openid signin form """

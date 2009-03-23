@@ -17,15 +17,14 @@ import time
 import urllib
 
 from django.conf import settings
-from django.http import str_to_unicode
+from django.http import str_to_unicode, get_host
+from django.utils.html import escape
 from openid.extensions import sreg
-
 try: # needed for some linux distributions like debian
     from openid.yadis import xri
 except ImportError:
     from yadis import xri
 
-__all__ = ['OpenID', 'from_openid_response', 'clean_next']
 
 class OpenID(object):
     def __init__(self, openid_, issued, attrs=None, sreg_=None):
@@ -62,3 +61,14 @@ def from_openid_response(openid_response):
         openid_response.identity_url, issued, openid_response.signed_fields, 
          dict(sreg_resp)
     )
+    
+def get_url_host(request):
+    if request.is_secure():
+        protocol = 'https'
+    else:
+        protocol = 'http'
+    host = escape(get_host(request))
+    return '%s://%s' % (protocol, host)
+
+def get_full_url(request):
+    return get_url_host(request) + request.get_full_path()
