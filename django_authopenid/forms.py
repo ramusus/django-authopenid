@@ -90,61 +90,6 @@ class OpenidRegisterForm(forms.Form):
                     another.')
             raise forms.ValidationError(_("This email is already \
                 registered in our database. Please choose another."))
- 
-    
-class OpenidVerifyForm(forms.Form):
-    """ openid verify form (associate an openid with an account) """
-    next = forms.CharField(max_length=255, widget = forms.HiddenInput(), 
-            required=False)
-    username = forms.CharField(max_length=30, 
-            widget=forms.widgets.TextInput(attrs=attrs_dict))
-    password = forms.CharField(max_length=128, 
-            widget=forms.widgets.PasswordInput(attrs=attrs_dict))
-    
-    def __init__(self, data=None, files=None, auto_id='id_%s',
-            prefix=None, initial=None): 
-        super(OpenidVerifyForm, self).__init__(data, files, auto_id,
-                prefix, initial)
-        self.user_cache = None
-
-    def clean_username(self):
-        """ validate username """
-        if 'username' in self.cleaned_data:
-            if not username_re.search(self.cleaned_data['username']):
-                raise forms.ValidationError(_("Usernames can only contain \
-                    letters, numbers and underscores"))
-            try:
-                user = User.objects.get(
-                        username__exact = self.cleaned_data['username']
-                )
-            except User.DoesNotExist:
-                raise forms.ValidationError(_("This username don't exist. \
-                        Please choose another."))
-            except User.MultipleObjectsReturned:
-                raise forms.ValidationError(u'Somehow, that username is in \
-                    use for multiple accounts. Please contact us to get this \
-                    problem resolved.')
-            return self.cleaned_data['username']
-            
-    def clean_password(self):
-        """ test if password is valid for this user """
-        if 'username' in self.cleaned_data and \
-                'password' in self.cleaned_data:
-            self.user_cache =  authenticate(
-                    username = self.cleaned_data['username'], 
-                    password = self.cleaned_data['password']
-            )
-            if self.user_cache is None:
-                raise forms.ValidationError(_("Please enter a valid \
-                    username and password. Note that both fields are \
-                    case-sensitive."))
-            elif self.user_cache.is_active == False:
-                raise forms.ValidationError(_("This account is inactive."))
-            return self.cleaned_data['password']
-            
-    def get_user(self):
-        """ get authenticated user """
-        return self.user_cache
 
 
 attrs_dict = { 'class': 'required' }
