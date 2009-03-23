@@ -45,8 +45,7 @@ setup(
     packages = ['django_authopenid'],
     package_data = { 'django_authopenid': [ 'templates/*.*', 'templates/authopenid/*'] },
 
-    setup_requires = [
-        'setuptools>=0.6b1',
+    install_requires = [
         'python-openid'
     ]
 
