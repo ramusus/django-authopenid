@@ -47,11 +47,6 @@ except ImportError:
     
 from django_authopenid.util import clean_next
 
-__all__ = ['OpenidSigninForm', 'OpenidAuthForm', 'OpenidVerifyForm',
-        'OpenidRegisterForm', 'RegistrationForm', 'ChangepwForm',
-        'ChangeemailForm', 'EmailPasswordForm', 'DeleteForm',
-        'ChangeOpenidForm', 'ChangeEmailForm', 'ChangepwForm']
-
 class OpenidSigninForm(forms.Form):
     """ signin form """
     openid_url = forms.CharField(max_length=255, 
