@@ -13,17 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-from django.http import HttpResponseRedirect, get_host
-from django.shortcuts import render_to_response as render
-from django.template import RequestContext, loader, Context
 from django.conf import settings
+from django.contrib.auth import REDIRECT_FIELD_NAME
+from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import User
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
+
+from django.http import HttpResponseRedirect
+from django.shortcuts import render_to_response as render
+from django.template import RequestContext, loader, Context
+
+
 from django.core.urlresolvers import reverse
 from django.utils.encoding import smart_unicode
-from django.utils.html import escape
 from django.utils.translation import ugettext as _
 from django.contrib.sites.models import Site
 from django.utils.http import urlquote_plus
@@ -46,19 +49,6 @@ from django_authopenid import DjangoOpenIDStore
 from django_authopenid.forms import *
 from django_authopenid.models import UserAssociation, UserPasswordQueue
 from django_authopenid.utils import *
-
-
-def get_url_host(request):
-    if request.is_secure():
-        protocol = 'https'
-    else:
-        protocol = 'http'
-    host = escape(get_host(request))
-    return '%s://%s' % (protocol, host)
-
-def get_full_url(request):
-    return get_url_host(request) + request.get_full_path()
-
 
 def ask_openid(request, openid_url, redirect_to, on_failure=None,
         sreg_request=None):
@@ -131,53 +121,54 @@ def not_authenticated(func):
     return decorated
 
 @not_authenticated
-def signin(request, template_name='authopenid/signin.html'):
+def signin(request, template_name='authopenid/signin.html', redirect_field_name=REDIRECT_FIELD_NAME,
+        openid_form=OpenidSigninForm, auth_form=AuthenticationForm):
     """
     signin page. It manage the legacy authentification (user/password) 
     and authentification with openid.
 
-    url: /signin/
+    :attr request: request object
+    :attr template_name: string, name of template to use
+    :attr redirect_field_name: string, field name used for redirect. by default 'next'
+    :attr openid_form: form use for openid signin, by default `OpenidSigninForm`
+    :attr auth_form: form object used for legacy authentification. 
+    by default AuthentificationForm form auser auth contrib.
     
-    template : authopenid/signin.htm
     """
-
     on_failure = signin_failure
-    next = clean_next(request.GET.get('next'))
-
-    form_signin = OpenidSigninForm(initial={'next':next})
-    form_auth = OpenidAuthForm(initial={'next':next})
-
-    if request.POST:   
+    redirect_to = request.REQUEST.get(redirect_field_name, '')
+    form1 = signin_form()
+    form2 = auth_form()
+    if request.POST:
+        if not redirect_to or '//' in redirect_to or ' ' in redirect_to:
+            redirect_to = settings.LOGIN_REDIRECT_URL
+            
         if 'bsignin' in request.POST.keys():
-            form_signin = OpenidSigninForm(request.POST)
-            if form_signin.is_valid():
-                next = clean_next(form_signin.cleaned_data.get('next'))
+            form1 = OpenidSigninForm(data=request.POST)
+            if form1.is_valid():
                 sreg_req = sreg.SRegRequest(optional=['nickname', 'email'])
-                redirect_to = "%s%s?%s" % (
+                redirect_url = "%s%s?%s" % (
                         get_url_host(request),
                         reverse('user_complete_signin'), 
-                        urllib.urlencode({'next':next})
+                        urllib.urlencode({ REDIRECT_FIELD_NAME: redirect_to })
                 )
-
                 return ask_openid(request, 
-                        form_signin.cleaned_data['openid_url'], 
-                        redirect_to, 
+                        form1.cleaned_data['openid_url'], 
+                        redirect_url, 
                         on_failure=signin_failure, 
                         sreg_request=sreg_req)
-
         elif 'blogin' in request.POST.keys():
             # perform normal django authentification
-            form_auth = OpenidAuthForm(request.POST)
-            if form_auth.is_valid():
-                user_ = form_auth.get_user()
-                login(request, user_)
-                next = clean_next(form_auth.cleaned_data.get('next'))
-                return HttpResponseRedirect(next)
-
-
+            form2 = auth_form(data=request.POST)
+            if form2.is_valid():
+                login(request, form2.get_user())
+                if request.session.test_cookie_worked():
+                    request.session.delete_test_cookie()
+                return HttpResponseRedirect(redirect_to)
     return render(template_name, {
-        'form1': form_auth,
-        'form2': form_signin,
+        'form1': form1,
+        'form2': form2,
+        redirect_field_name: redirect_to,
         'msg':  request.GET.get('msg',''),
         'sendpw_url': reverse('user_sendpw'),
     }, context_instance=RequestContext(request))
@@ -357,7 +348,7 @@ def signup(request, template_name='authopenid/signup.html'):
             
             return HttpResponseRedirect(next)
     
-    return render(template_name='authopenid/signup.html', {
+    return render(template_name, {
         'form': form,
         'form2': form_signin,
         }, context_instance=RequestContext(request))
@@ -411,7 +402,7 @@ def account_settings(request, template_name='authopenid/settings.html'):
         is_openid = False
 
 
-    return render(template_name='authopenid/settings.html', {
+    return render(template_name, {
         'msg': msg,
         'is_openid': is_openid
         }, context_instance=RequestContext(request))
