@@ -242,9 +242,7 @@ def register(request, template_name='authopenid/complete.html',
     :attr register_account: callback used to create a new account from openid. 
     It take the register_form as param.
     
-    
     """
-
     is_redirect = False
     redirect_to = request.REQUEST.get(redirect_field_name, '')
     openid_ = request.session.get('openid', None)
@@ -288,26 +286,31 @@ def register(request, template_name='authopenid/complete.html',
     return render(template_name, {
         'form1': form1,
         'form2': form2,
+        redirect_field_name: redirect_to,
         'nickname': nickname,
         'email': email
     }, context_instance=RequestContext(request))
 
 
-
-def signin_failure(request, message, template_name='authopenid/signin.html'):
+def signin_failure(request, message, template_name='authopenid/signin.html',
+        redirect_field_name=REDIRECT_FIELD_NAME, openid_form=OpenidSigninForm, 
+        auth_form=AuthenticationForm):
     """
     falure with openid signin. Go back to signin page.
+    
+    :attr request: request object
+    :attr template_name: string, name of template to use, default is 'authopenid/signin.html'
+    :attr redirect_field_name: string, field name used for redirect. by default 'next'
+    :attr openid_form: form use for openid signin, by default `OpenidSigninForm`
+    :attr auth_form: form object used for legacy authentification. 
+    by default AuthentificationForm form auser auth contrib.
 
-    template : "authopenid/signin.html"
     """
-    next = clean_next(request.GET.get('next'))
-    form_signin = OpenidSigninForm(initial={'next': next})
-    form_auth = OpenidAuthForm(initial={'next': next})
-
     return render(template_name, {
         'msg': message,
-        'form1': form_auth,
-        'form2': form_signin,
+        'form1': openid_form(),
+        'form2': auth_form(),
+        redirect_field_name: request.REQUEST.get(redirect_field_name, '')
     }, context_instance=RequestContext(request))
 
 @not_authenticated
