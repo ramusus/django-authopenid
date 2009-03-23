@@ -58,12 +58,11 @@ except ImportError:
 import re
 import urllib
 
-
-from django_authopenid.util import OpenID, DjangoOpenIDStore, from_openid_response, clean_next
+from django_authopenid import DjangoOpenIDStore
+from django_authopenid.forms import *
 from django_authopenid.models import UserAssociation, UserPasswordQueue
-from django_authopenid.forms import OpenidSigninForm, OpenidAuthForm, OpenidRegisterForm, \
-        OpenidVerifyForm, RegistrationForm, ChangepwForm, ChangeemailForm, \
-        ChangeopenidForm, DeleteForm, EmailPasswordForm
+from django_authopenid.utils import *
+
 
 def get_url_host(request):
     if request.is_secure():
@@ -75,7 +74,6 @@ def get_url_host(request):
 
 def get_full_url(request):
     return get_url_host(request) + request.get_full_path()
-
 
 
 def ask_openid(request, openid_url, redirect_to, on_failure=None,
