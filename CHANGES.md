@@ -2,7 +2,7 @@
 ## version 1.0a
 
 ### BREAKING CHANGE: 
-- need django latest trunk or 1.1 when released
+
 - no more legacy user creation and account managementt. Developpers could use django-registration or anything else
 
 ### OTHERS:
