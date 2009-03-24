@@ -24,7 +24,12 @@ This application allow a user to connect to you website with :
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
-from django.utils.importlib import import_module
+
+try:
+    from django.utils.importlib import import_module
+except ImportError:
+    # version < 1.1
+    from django_authopenid.utils.importlib import import_module
 
 try:
     __version__ = __import__('pkg_resources').get_distribution('django_authopenid').version
