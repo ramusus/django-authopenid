@@ -1,9 +1,10 @@
-django_authopenid 
+#django_authopenid 
+
 Author : Benoît Chesneau <benoitc@metavers.net>
-Url : http://code.google.com/p/django-authopenid/
+Url : http://bitbucket.org/benoitc/django-authopenid/
 
 Updated version of this doc is always here :
-http://code.google.com/p/django-authopenid/wiki/README
+http://bitbucket.org/benoitc/django-authopenid/wiki
 
 
 = Introduction  =
@@ -16,22 +17,15 @@ This application allow a user to connect to you website with :
 
 Idee is having [http://ma.gnolia.com/ ma.gnolia] workflow to integrate openid and _legacy_ authentification.
 
-If the user connect with an openid he could associate it with its legaccy account or just create a new django account. When the user is connected you could manage him like you usually do with auth contrib :
+If the user connect with an openid he could associate it with its legaccy account or just create a new django account. When the user is connected you could manage him like you usually do with auth contrib or [django-registration](http://bitbucket.org/ubernostrum/django-registration/):
 
 http://www.djangoproject.com/documentation/authentication/ 
 
-This application also provide view to :
- * change password
- * change account email
- * change associated openid
- * delete account
- * send a new password
-
+T
 = Requirements =
 
- * [http://openidenabled.com/python-openid/ python-openid 2.x]
- * [http://effbot.org/zone/element-index.htm python-elementreee (for python 2.4x)]
- * [http://code.google.com/p/httplib2/ httplib2]
+ * [django 1.x](http://djangoproject.org)
+ * [python-openid 2.x](http://openidenabled.com/python-openid/)
 
 = Set your django project =
 
@@ -71,27 +65,13 @@ all code is documented so you could esayly know what do a view.
   * /account/signin/complete/ : register openid after signin 
   * /account/signup : legacy authentification 
   * /account/sendpw/password : send a new password
-  * /account/password/confirm : confirm change of password
- * account settings : 
-  * /acount : main page of account for user  
-  * /account/password: change password page
-  * /account/email : change email page
-  * /account/delete : delete account
-  * /account/openid : associate a new openid for an account.
+
 
 == templates ==
 
 Templates are in *templates/authopenid* folder :
 
- * changeemail.html  : change email page
- * changepw.html : change password 
- * sendpw.html : send password
- * changeopenid.html : associate new openid
- * delete.html : delete password
- * sendpw_email.txt   : send new password email template
- * settings.html : index page
- * complete.html  : complete page after signin (register openid)
- * confirm_email.txt : confirm registration mail template
- * signin.html : signin page
- * signup.html : legacy registration
 
+ * complete.html  : complete page after signin (register openid)
+ * signin.html : signin page
+ 
