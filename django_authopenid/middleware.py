@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-from django_authopenid.utils import mimeparse
+from django_authopenid.utils.mimeparse import best_match
 from django.http import HttpResponseRedirect
 from django.core.urlresolvers import reverse
 
@@ -33,7 +33,7 @@ class OpenIDMiddleware(object):
             return response
         path = request.get_full_path()
         if path == "/" and request.META.has_key('HTTP_ACCEPT') and \
-                mimeparse.best_match(['text/html', 'application/xrds+xml'], 
+                best_match(['text/html', 'application/xrds+xml'], 
                     request.META['HTTP_ACCEPT']) == 'application/xrds+xml':
             return HttpResponseRedirect(reverse('yadis_xrdf'))
         return response

@@ -47,7 +47,7 @@ import urllib
 
 from django_authopenid import DjangoOpenIDStore
 from django_authopenid.forms import *
-from django_authopenid.models import UserAssociation, UserPasswordQueue
+from django_authopenid.models import UserAssociation
 from django_authopenid.utils import *
 
 def ask_openid(request, openid_url, redirect_to, on_failure=None,
@@ -168,8 +168,7 @@ def signin(request, template_name='authopenid/signin.html', redirect_field_name=
         'form1': form1,
         'form2': form2,
         redirect_field_name: redirect_to,
-        'msg':  request.GET.get('msg',''),
-        'sendpw_url': reverse('user_sendpw'),
+        'msg':  request.GET.get('msg','')
     }, context_instance=RequestContext(request))
 
 def complete_signin(request):
