@@ -34,7 +34,7 @@ http://www.djangoproject.com/documentation/authentication/
 To use django_authopenid add `django_authopenid.middleware.OpenIDMiddleware` to MIDDLEWARE_CLASSES and
  `'django_authopenid'` to INSTALLED_APP. 
 
-then add django_authopeid.urls to urls.py, for example :
+then add django_authopenid.urls to urls.py, for example :
 
 	(r'^account/', include('django_authopenid.urls')),
 
