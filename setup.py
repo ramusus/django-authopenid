@@ -13,11 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from setuptools import setup
-
+try:
+    from setuptools import setup, find_packages
+except ImportError:
+    import ez_setup
+    ez_setup.use_setuptools()
+    from setuptools import setup, find_packages
 
 import os
 import sys
+
+data_files = []
+for dir, dirs, files in os.walk('django_authopenid'):
+    for i, dirname in enumerate(dirs):
+        if dirname.startswith('.'): del dirs[i]
+        
+    data_files.append((dir, [os.path.join(dir, file_) for file_ in files]))
 
 setup(
     name = 'django-authopenid',
@@ -42,12 +53,17 @@ setup(
         'Topic :: Utilities',
         'Topic :: System :: Systems Administration :: Authentication/Directory'
     ],
-    packages = ['django_authopenid'],
-    package_data = { 'django_authopenid': [ 'templates/*.*', 'templates/authopenid/*'] },
+    packages = find_packages(),
+    data_files = data_files,
+    include_package_data = True,
+    
+    setup_requires = [
+        'setuptools>=0.6c7',
+    ],
 
     install_requires = [
         'python-openid'
-    ]
+    ],
 
 
 )
