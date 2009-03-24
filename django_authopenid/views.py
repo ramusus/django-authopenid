@@ -15,7 +15,7 @@
 #
 from django.conf import settings
 from django.contrib.auth import REDIRECT_FIELD_NAME
-from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.forms import *
 from django.contrib.auth.models import User
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
@@ -213,9 +213,7 @@ def is_association_exist(openid_url):
     return is_exist
     
 def register_account(form):
-    tmp_pwd = User.objects.make_random_password()
-    user_ = User.objects.create_user(form.cleaned_data['username'],
-             form.cleaned_data['email'], tmp_pwd)
+    user_ = User.objects.create_user(form.cleaned_data['username'], form.cleaned_data['email'])
     user_.backend = "django.contrib.auth.backends.ModelBackend"
     return user_
 
@@ -337,3 +335,42 @@ def xrdf(request, template_name='authopenid/yadis.xrdf'):
     return render(template_name, { 
         'return_to': return_to 
         }, context_instance=RequestContext(request))
+        
+        
+@login_required
+def password_change(request, template_name='authopenid/password_change_form.html', 
+        set_password_form=SetPasswordForm, change_password_form=PasswordChangeForm,
+        post_change_redirect=None):
+    """
+    View that allow the user to set a password. Only 
+    """
+    if post_change_redirect is None:
+        post_change_redirect = settings.LOGIN_REDIRECT_URL
+
+    set_password = False
+    if request.user.has_usable_password():
+        change_form = change_password_form
+    else:
+        set_password = True
+        change_form = set_password_form
+
+    if request.POST:
+        form = change_form(request.user, request.POST)
+        print form.__class__.__name__
+        print form.is_valid()
+        if form.is_valid():
+            form.save()
+            msg = urllib.quote(_("Password changed"))
+            redirect_to = "%s?%s" % (post_change_redirect, 
+                                urllib.urlencode({ "msg": msg }))
+            print redirect_to
+            return HttpResponseRedirect(redirect_to)
+    else:
+        
+        form = change_form(request.user)
+        print form.__class__.__name__
+
+    return render(template_name, {
+        'form': form,
+        'set_password': set_password
+    }, context_instance=RequestContext(request))

@@ -29,8 +29,6 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import models
 
-
-
 class Nonce(models.Model):
     """ openid nonce """
     server_url = models.CharField(max_length=255)
@@ -40,7 +38,6 @@ class Nonce(models.Model):
     def __unicode__(self):
         return u"Nonce: %s" % self.id
 
-    
 class Association(models.Model):
     """ association openid url and lifetime """
     server_url = models.TextField(max_length=2047)

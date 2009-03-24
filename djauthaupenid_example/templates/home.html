@@ -1,7 +1,17 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1>Django AuthOpenID test</h1>
-    
-    <p>To test go <a href="/account/signin">here</a>.</p>
+<h1>Django AuthOpenID test</h1>
+
+<p>Welcome {{ user }}</p>
+
+{% if user.is_authenticated%}
+<ul>
+	<li><a href="{% url auth_password_change %}">Change password</a></li>
+  	<li><a href="{% url user_signout %}">signout</a></li>
+</ul>
+{% else%}    
+<p> <a href="{% url user_signin %}">signin</a></p>
+{% endif %}
+
 {% endblock %}
