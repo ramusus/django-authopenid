@@ -122,7 +122,7 @@ def not_authenticated(func):
 
 @not_authenticated
 def signin(request, template_name='authopenid/signin.html', redirect_field_name=REDIRECT_FIELD_NAME,
-        openid_form=OpenidSigninForm, auth_form=AuthenticationForm):
+        openid_form=OpenidSigninForm, auth_form=AuthenticationForm, on_failure=None):
     """
     signin page. It manage the legacy authentification (user/password) 
     and authentification with openid.
@@ -135,7 +135,9 @@ def signin(request, template_name='authopenid/signin.html', redirect_field_name=
     by default AuthentificationForm form auser auth contrib.
     
     """
-    on_failure = signin_failure
+    if on_failure is None:
+        on_failure = signin_failure
+        
     redirect_to = request.REQUEST.get(redirect_field_name, '')
     form1 = openid_form()
     form2 = auth_form()
@@ -154,7 +156,7 @@ def signin(request, template_name='authopenid/signin.html', redirect_field_name=
                 return ask_openid(request, 
                         form1.cleaned_data['openid_url'], 
                         redirect_url, 
-                        on_failure=signin_failure, 
+                        on_failure=on_failure, 
                         sreg_request=sreg_req)
         elif 'blogin' in request.POST.keys():
             # perform normal django authentification
