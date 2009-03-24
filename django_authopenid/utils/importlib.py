@@ -1,5 +1,4 @@
-
-# From django project
+# From django project. See LICENSE_DJANGO for license.
 # Taken from Python 2.7 with permission from/by the original author.
 
 import sys
