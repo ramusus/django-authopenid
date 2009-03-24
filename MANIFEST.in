@@ -1,0 +1,9 @@
+include AUTHORS
+INCLUDE CHANGES.MD
+include LICENSE
+include LICENSE_DJANGO
+include NOTICE
+include README
+include ez_setup.py
+recursive-include django_authopenid/templates *
+recursive-include djauthopenid_example/templates *
