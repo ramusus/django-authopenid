@@ -376,3 +376,5 @@ def password_change(request, template_name='authopenid/password_change_form.html
         'form': form,
         'set_password': set_password
     }, context_instance=RequestContext(request))
+    
+    
