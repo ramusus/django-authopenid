@@ -51,12 +51,14 @@ username_re = re.compile(r'^\w+$')
 
 class OpenidRegisterForm(forms.Form):
     """ openid signin form """
-    next = forms.CharField(max_length=255, widget=forms.HiddenInput(), 
-            required=False)
     username = forms.CharField(max_length=30, 
             widget=forms.widgets.TextInput(attrs=attrs_dict))
     email = forms.EmailField(widget=forms.TextInput(attrs=dict(attrs_dict, 
         maxlength=200)), label=u'Email address')
+        
+    def __init__(self, *args, **kwargs):
+        super(OpenidRegisterForm, self).__init__(*args, **kwargs)
+        self.user = None
     
     def clean_username(self):
         """ test if username is valid and exist in database """
@@ -67,13 +69,14 @@ class OpenidRegisterForm(forms.Form):
             try:
                 user = User.objects.get(
                         username__exact = self.cleaned_data['username']
-                        )
+                )
             except User.DoesNotExist:
                 return self.cleaned_data['username']
             except User.MultipleObjectsReturned:
                 raise forms.ValidationError(u'There is already more than one \
                     account registered with that username. Please try \
                     another.')
+            self.user = user
             raise forms.ValidationError(_("This username is already \
                 taken. Please choose another."))
             
