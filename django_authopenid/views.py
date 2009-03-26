@@ -155,7 +155,7 @@ def signin(request, template_name='authopenid/signin.html', redirect_field_name=
     if request.POST:
         if not redirect_to or '//' in redirect_to or ' ' in redirect_to:
             redirect_to = settings.LOGIN_REDIRECT_URL     
-        if 'bsignin' in request.POST.keys():
+        if 'openid_url' in request.POST.keys():
             form1 = openid_form(data=request.POST)
             if form1.is_valid():
                 sreg_req = sreg.SRegRequest(optional=['nickname', 'email'])
@@ -169,7 +169,7 @@ def signin(request, template_name='authopenid/signin.html', redirect_field_name=
                         redirect_url, 
                         on_failure=on_failure, 
                         sreg_request=sreg_req)
-        elif 'blogin' in request.POST.keys():
+        else:
             # perform normal django authentification
             form2 = auth_form(data=request.POST)
             if form2.is_valid():
@@ -280,7 +280,7 @@ def register(request, template_name='authopenid/complete.html',
         if 'openid_url' in request.POST.keys():
             form1 = register_form(data=request.POST)
             if form1.is_valid():
-                user_ = register_account(form1, str(openid_))     
+                user_ = register_account(form1, str(openid_))
         else:
             form2 = auth_form(data=request.POST)
             if form2.is_valid():
