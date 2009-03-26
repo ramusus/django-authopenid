@@ -85,8 +85,7 @@ def ask_openid(request, openid_url, redirect_to, on_failure=None,
     redirect_url = auth_request.redirectURL(trust_root, redirect_to)
     return HttpResponseRedirect(redirect_url)
 
-def complete(request, on_success=None, on_failure=None, return_to=None, 
-        redirect_field_name=REDIRECT_FIELD_NAME):
+def complete(request, on_success=None, on_failure=None, return_to=None, **kwargs):
     """ complete openid signin """
     on_success = on_success or default_on_success
     on_failure = on_failure or default_on_failure
@@ -99,22 +98,22 @@ def complete(request, on_success=None, on_failure=None, return_to=None,
     
     if openid_response.status == SUCCESS:
         return on_success(request, openid_response.identity_url,
-                openid_response, redirect_field_name=redirect_field_name)
+                openid_response, **kwargs)
     elif openid_response.status == CANCEL:
-        return on_failure(request, 'The request was canceled')
+        return on_failure(request, 'The request was canceled', **kwargs)
     elif openid_response.status == FAILURE:
-        return on_failure(request, openid_response.message)
+        return on_failure(request, openid_response.message, **kwargs)
     elif openid_response.status == SETUP_NEEDED:
-        return on_failure(request, 'Setup needed')
+        return on_failure(request, 'Setup needed', **kwargs)
     else:
         assert False, "Bad openid status: %s" % openid_response.status
 
-def default_on_success(request, identity_url, openid_response):
+def default_on_success(request, identity_url, openid_response, **kwargs):
     """ default action on openid signin success """
     request.session['openid'] = from_openid_response(openid_response)
     return HttpResponseRedirect(clean_next(request.GET.get('next')))
 
-def default_on_failure(request, message):
+def default_on_failure(request, message, **kwargs):
     """ default failure action on signin """
     return render('openid_failure.html', {
         'message': message
@@ -185,15 +184,17 @@ def signin(request, template_name='authopenid/signin.html', redirect_field_name=
         'msg':  request.GET.get('msg','')
     }, context_instance=_build_context(request, extra_context=extra_context))
 
-def complete_signin(request, redirect_field_name=REDIRECT_FIELD_NAME):
+def complete_signin(request, redirect_field_name=REDIRECT_FIELD_NAME,  
+        openid_form=OpenidSigninForm, auth_form=AuthenticationForm, extra_context=None):
     """ in case of complete signin with openid """
     return complete(request, signin_success, signin_failure,
             get_url_host(request) + reverse('user_complete_signin'),
-            redirect_field_name=redirect_field_name,)
+            redirect_field_name=redirect_field_name, openid_form=openid_form, 
+            auth_form=auth_form, extra_context=extra_context)
 
 
 def signin_success(request, identity_url, openid_response,
-        redirect_field_name=REDIRECT_FIELD_NAME):
+        redirect_field_name=REDIRECT_FIELD_NAME, **kwargs):
     """
     openid signin success.
 
