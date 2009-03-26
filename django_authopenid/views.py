@@ -19,6 +19,7 @@ from django.contrib.auth.forms import *
 from django.contrib.auth.models import User
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
+from django.contrib.sites.models import Site
 
 from django.http import HttpResponseRedirect
 from django.shortcuts import render_to_response as render
@@ -222,7 +223,7 @@ def register_account(form):
 @not_authenticated
 def register(request, template_name='authopenid/complete.html', 
             redirect_field_name=REDIRECT_FIELD_NAME, register_form=OpenidRegisterForm, 
-            auth_form=AuthenticationForm, register_account=register_account):
+            auth_form=AuthenticationForm, register_account=register_account, send_email=True):
     """
     register an openid.
 
@@ -280,6 +281,19 @@ def register(request, template_name='authopenid/complete.html',
             )
             uassoc.save()
             login(request, user_)
+            
+            if send_email:
+                from django.core.mail import send_mail
+                current_site = Site.objects.get_current()
+                subject = render_to_string('authopenid/registration_email_subject.txt',
+                                           { 'site': current_site,
+                                             'user': user})
+                message = render_to_string('authopenid/registration_email.txt',
+                                           { 'site': current_site,
+                                             'user': user
+                                            })
+
+                send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [new_user.email])
             return HttpResponseRedirect(redirect_to) 
     
     return render(template_name, {
@@ -376,5 +390,3 @@ def password_change(request, template_name='authopenid/password_change_form.html
         'form': form,
         'set_password': set_password
     }, context_instance=RequestContext(request))
-    
-    
