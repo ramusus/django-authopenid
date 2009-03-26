@@ -107,11 +107,12 @@ class DjangoOpenIDStore(openid.store.interface.OpenIDStore):
 
         return False
    
+    #FIX IT
     def cleanupNonce(self):
-        Nonce.objects.filter(timestamp<int(time.time()) - nonce.SKEW).delete()
+        Nonce.objects.filter(timestamp < (int(time.time()) - nonce.SKEW)).delete()
 
     def cleanupAssociations(self):
-        Association.objects.extra(where=['issued + lifetimeint<(%s)' % time.time()]).delete()
+        Association.objects.extra(where=['issued + lifetime<(%s)' % time.time()]).delete()
 
     def getAuthKey(self):
         # Use first AUTH_KEY_LEN characters of md5 hash of SECRET_KEY

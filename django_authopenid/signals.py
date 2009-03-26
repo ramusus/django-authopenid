@@ -12,11 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from django.contrib import admin
-from django_authopenid.models import UserAssociation
+from django.dispatch import Signal
 
 
-class UserAssociationAdmin(admin.ModelAdmin):
-    """User association admin class"""
-admin.site.register(UserAssociation, UserAssociationAdmin)
+# a new user has been registered
+oid_register = Signal(providing_args=['openid'])
+
+# a new openid has been associated
+oid_associate = Signal(providing_args=["user", "openid"])

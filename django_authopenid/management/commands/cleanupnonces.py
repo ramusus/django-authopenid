@@ -13,10 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from django.contrib import admin
-from django_authopenid.models import UserAssociation
+from django.core.management.base import NoArgsCommand
 
+from django_authopenid import DjangoOpenIDStore
 
-class UserAssociationAdmin(admin.ModelAdmin):
-    """User association admin class"""
-admin.site.register(UserAssociation, UserAssociationAdmin)
+class Command(NoArgsCommand):
+    help = "Delete expired openid nonces"
+    
+    def handle_noargs(self, **options):
+        openid = DjangoOpenIDStore()
+        openid.cleanupNonce()
