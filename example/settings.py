@@ -46,7 +46,7 @@ MIDDLEWARE_CLASSES = (
     'django_authopenid.middleware.OpenIDMiddleware',
 )
 
-ROOT_URLCONF = 'djauthaupenid_example.urls'
+ROOT_URLCONF = 'example.urls'
 
 TEMPLATE_DIRS = (
     os.path.join(PROJECT_PATH, 'templates'),
@@ -60,5 +60,6 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.sites',
     'django.contrib.admin',
+    'registration',
     'django_authopenid',
 )
