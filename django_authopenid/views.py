@@ -85,7 +85,8 @@ def ask_openid(request, openid_url, redirect_to, on_failure=None,
     redirect_url = auth_request.redirectURL(trust_root, redirect_to)
     return HttpResponseRedirect(redirect_url)
 
-def complete(request, on_success=None, on_failure=None, return_to=None):
+def complete(request, on_success=None, on_failure=None, return_to=None, 
+        redirect_field_name=REDIRECT_FIELD_NAME):
     """ complete openid signin """
     on_success = on_success or default_on_success
     on_failure = on_failure or default_on_failure
@@ -98,7 +99,7 @@ def complete(request, on_success=None, on_failure=None, return_to=None):
     
     if openid_response.status == SUCCESS:
         return on_success(request, openid_response.identity_url,
-                openid_response)
+                openid_response, redirect_field_name=redirect_field_name)
     elif openid_response.status == CANCEL:
         return on_failure(request, 'The request was canceled')
     elif openid_response.status == FAILURE:
@@ -184,13 +185,15 @@ def signin(request, template_name='authopenid/signin.html', redirect_field_name=
         'msg':  request.GET.get('msg','')
     }, context_instance=_build_context(request, extra_context=extra_context))
 
-def complete_signin(request):
+def complete_signin(request, redirect_field_name=REDIRECT_FIELD_NAME):
     """ in case of complete signin with openid """
     return complete(request, signin_success, signin_failure,
-            get_url_host(request) + reverse('user_complete_signin'))
+            get_url_host(request) + reverse('user_complete_signin'),
+            redirect_field_name=redirect_field_name,)
 
 
-def signin_success(request, identity_url, openid_response):
+def signin_success(request, identity_url, openid_response,
+        redirect_field_name=REDIRECT_FIELD_NAME):
     """
     openid signin success.
 
@@ -207,7 +210,13 @@ def signin_success(request, identity_url, openid_response):
         rel = UserAssociation.objects.get(openid_url__exact = str(openid_))
     except:
         # try to register this new user
-        return register(request)
+        redirect_to = request.REQUEST.get(redirect_field_name, '')
+        if not redirect_to or '//' in redirect_to or ' ' in redirect_to:
+            redirect_to = settings.LOGIN_REDIRECT_URL
+        return HttpResponseRedirect(
+            "%s?%s" % (reverse('user_register'),
+            urllib.urlencode({ redirect_field_name: redirect_to }))
+        )
     user_ = rel.user
     if user_.is_active:
         user_.backend = "django.contrib.auth.backends.ModelBackend"
@@ -277,7 +286,7 @@ def register(request, template_name='authopenid/complete.html',
         user_ = None
         if not redirect_to or '//' in redirect_to or ' ' in redirect_to:
             redirect_to = settings.LOGIN_REDIRECT_URL
-        if 'openid_url' in request.POST.keys():
+        if 'email' in request.POST.keys():
             form1 = register_form(data=request.POST)
             if form1.is_valid():
                 user_ = register_account(form1, str(openid_))
@@ -323,7 +332,7 @@ def signin_failure(request, message, template_name='authopenid/signin.html',
         'form1': openid_form(),
         'form2': auth_form(),
         redirect_field_name: request.REQUEST.get(redirect_field_name, '')
-    }, context_instance=_build_context(request, _extra_context))
+    }, context_instance=_build_context(request, extra_context))
 
 
 @login_required
@@ -389,3 +398,45 @@ def password_change(request, template_name='authopenid/password_change_form.html
         'form': form,
         'set_password': set_password
     }, context_instance=_build_context(request, extra_context=extra_context))
+
+@login_required
+def associate_failure(request, message, template_name="authopenid/associate.html",
+        openid_form=OpenidSigninForm, redirect_name=None, extra_context=None):
+    
+    return render(template_name, {
+        'form': form,
+        'msg': message,
+    }, context_instance=_build_context(request, extra_context=extra_context))
+
+@login_required
+def associate_complete(request, template_name="authopenid/associate_complete.html", 
+        extra_context=None):
+    return complete(request, signin_success, signin_failure,
+            get_url_host(request) + reverse('user_complete_signin'))
+    
+@login_required
+def associate(request, template_name='authopenid/associate.html', 
+        openid_form=OpenidSigninForm, redirect_name=None,
+        on_failure=associate_failure, extra_context=None):
+    
+    if request.POST:            
+        form = openid_form(data=request.POST)
+        if form.is_valid():
+            redirect_name = redirect_name or 'authopenid_associate_complete'
+            redirect_to = "%s%s" % (
+                    get_url_host(request),
+                    reverse(redirect_name)
+            )
+            return ask_openid(request, 
+                    form1.cleaned_data['openid_url'], 
+                    redirect_to, 
+                    on_failure=on_failure, 
+                    sreg_request=None)
+    else:
+        form = openid_form()
+    return render(template_name, {
+        'form': form,
+    }, context_instance=_build_context(request, extra_context=extra_context))
+    
+
+            
