@@ -28,6 +28,16 @@ urlpatterns = patterns('',
     
     # user profile
     url(r'^password/$',oid_views.password_change, name='auth_password_change'),
+    url(r'^password/reset/$', auth_views.password_reset,  name='auth_password_reset'),
+    url(r'^password/reset/confirm/(?P<uidb36>[0-9A-Za-z]+)-(?P<token>.+)/$',
+        auth_views.password_reset_confirm,
+        name='auth_password_reset_confirm'),
+    url(r'^password/reset/complete/$',
+        auth_views.password_reset_complete,
+        name='auth_password_reset_complete'),
+    url(r'^password/reset/done/$',
+        auth_views.password_reset_done,
+        name='auth_password_reset_done'),
     
     # manage account registration
     url(r'^register/$', oid_views.register, name='user_register'),
@@ -38,7 +48,7 @@ urlpatterns = patterns('',
     url(r'^signup/complete/$',direct_to_template, 
         {'template': 'registration/registration_complete.html'},
         name='registration_complete'),
-    
+        
     # yadis uri
     url(r'^yadis.xrdf$', oid_views.xrdf, name='oid_views.yadis_xrdf'),
 )
