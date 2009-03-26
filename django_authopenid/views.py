@@ -52,7 +52,7 @@ from django_authopenid.models import UserAssociation
 from django_authopenid.signals import oid_register
 from django_authopenid.utils import *
 
-def _build_context(requets, extra_context=None):
+def _build_context(request, extra_context=None):
     if extra_context is None:
         extra_context = {}
     context = RequestContext(request)
