@@ -29,7 +29,7 @@ from django.template import RequestContext, loader, Context
 from django.core.urlresolvers import reverse
 from django.utils.encoding import smart_unicode
 from django.utils.translation import ugettext as _
-from django.contrib.sites.models import Site
+
 from django.utils.http import urlquote_plus
 from django.core.mail import send_mail
 
@@ -49,8 +49,17 @@ import urllib
 from django_authopenid import DjangoOpenIDStore
 from django_authopenid.forms import *
 from django_authopenid.models import UserAssociation
+from django_authopenid.signals import oid_register
 from django_authopenid.utils import *
 
+def _build_context(requets, extra_context=None):
+    if extra_context is None:
+        extra_context = {}
+    context = RequestContext(request)
+    for key, value in extra_context.items():
+        context[key] = callable(value) and value() or value
+    return context    
+    
 def ask_openid(request, openid_url, redirect_to, on_failure=None,
         sreg_request=None):
     """ basic function to ask openid and return response """
@@ -123,7 +132,8 @@ def not_authenticated(func):
 
 @not_authenticated
 def signin(request, template_name='authopenid/signin.html', redirect_field_name=REDIRECT_FIELD_NAME,
-        openid_form=OpenidSigninForm, auth_form=AuthenticationForm, on_failure=None):
+        openid_form=OpenidSigninForm, auth_form=AuthenticationForm, 
+        on_failure=None, extra_context=None):
     """
     signin page. It manage the legacy authentification (user/password) 
     and authentification with openid.
@@ -172,7 +182,7 @@ def signin(request, template_name='authopenid/signin.html', redirect_field_name=
         'form2': form2,
         redirect_field_name: redirect_to,
         'msg':  request.GET.get('msg','')
-    }, context_instance=RequestContext(request))
+    }, context_instance=_build_context(request, extra_context=extra_context))
 
 def complete_signin(request):
     """ in case of complete signin with openid """
@@ -215,15 +225,17 @@ def is_association_exist(openid_url):
         is_exist = False
     return is_exist
     
-def register_account(form):
-    user_ = User.objects.create_user(form.cleaned_data['username'], form.cleaned_data['email'])
-    user_.backend = "django.contrib.auth.backends.ModelBackend"
-    return user_
+def register_account(form, openid_url):
+    user = User.objects.create_user(form.cleaned_data['username'], form.cleaned_data['email'])
+    user.backend = "django.contrib.auth.backends.ModelBackend"
+    oid_register.send(sender=user, openid=openid_url)
+    return user
 
 @not_authenticated
 def register(request, template_name='authopenid/complete.html', 
             redirect_field_name=REDIRECT_FIELD_NAME, register_form=OpenidRegisterForm, 
-            auth_form=AuthenticationForm, register_account=register_account, send_email=True):
+            auth_form=AuthenticationForm, register_account=register_account, 
+            send_email=True, extra_context=None):
     """
     register an openid.
 
@@ -265,11 +277,11 @@ def register(request, template_name='authopenid/complete.html',
         user_ = None
         if not redirect_to or '//' in redirect_to or ' ' in redirect_to:
             redirect_to = settings.LOGIN_REDIRECT_URL
-        if 'bnewaccount' in request.POST.keys():
+        if 'openid_url' in request.POST.keys():
             form1 = register_form(data=request.POST)
             if form1.is_valid():
-                user_ = register_account(form1)     
-        elif 'bverify' in request.POST.keys():
+                user_ = register_account(form1, str(openid_))     
+        else:
             form2 = auth_form(data=request.POST)
             if form2.is_valid():
                 user_ = form2.get_user()
@@ -279,21 +291,8 @@ def register(request, template_name='authopenid/complete.html',
                         openid_url=str(openid_),
                         user_id=user_.id
             )
-            uassoc.save()
-            login(request, user_)
-            
-            if send_email:
-                from django.core.mail import send_mail
-                current_site = Site.objects.get_current()
-                subject = render_to_string('authopenid/registration_email_subject.txt',
-                                           { 'site': current_site,
-                                             'user': user})
-                message = render_to_string('authopenid/registration_email.txt',
-                                           { 'site': current_site,
-                                             'user': user
-                                            })
-
-                send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [new_user.email])
+            uassoc.save(send_email=send_email)
+            login(request, user_)    
             return HttpResponseRedirect(redirect_to) 
     
     return render(template_name, {
@@ -302,12 +301,12 @@ def register(request, template_name='authopenid/complete.html',
         redirect_field_name: redirect_to,
         'nickname': nickname,
         'email': email
-    }, context_instance=RequestContext(request))
+    }, context_instance=_build_context(request, extra_context=extra_context))
 
 
 def signin_failure(request, message, template_name='authopenid/signin.html',
         redirect_field_name=REDIRECT_FIELD_NAME, openid_form=OpenidSigninForm, 
-        auth_form=AuthenticationForm):
+        auth_form=AuthenticationForm, extra_context=None):
     """
     falure with openid signin. Go back to signin page.
     
@@ -324,7 +323,7 @@ def signin_failure(request, message, template_name='authopenid/signin.html',
         'form1': openid_form(),
         'form2': auth_form(),
         redirect_field_name: request.REQUEST.get(redirect_field_name, '')
-    }, context_instance=RequestContext(request))
+    }, context_instance=_build_context(request, _extra_context))
 
 
 @login_required
@@ -356,7 +355,7 @@ def xrdf(request, template_name='authopenid/yadis.xrdf'):
 @login_required
 def password_change(request, template_name='authopenid/password_change_form.html', 
         set_password_form=SetPasswordForm, change_password_form=PasswordChangeForm,
-        post_change_redirect=None):
+        post_change_redirect=None, extra_context=None):
     """
     View that allow the user to set a password. Only 
     """
@@ -389,4 +388,4 @@ def password_change(request, template_name='authopenid/password_change_form.html
     return render(template_name, {
         'form': form,
         'set_password': set_password
-    }, context_instance=RequestContext(request))
+    }, context_instance=_build_context(request, extra_context=extra_context))
