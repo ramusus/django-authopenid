@@ -27,7 +27,7 @@ urlpatterns = patterns('',
     url(r'^activate/(?P<activation_key>\w+)/$', reg_views.activate, name='registration_activate'),
     
     # user profile
-    url(r'^password/$',oid_views.password_change, name='auth_password_change'),
+    
     url(r'^password/reset/$', auth_views.password_reset,  name='auth_password_reset'),
     url(r'^password/reset/confirm/(?P<uidb36>[0-9A-Za-z]+)-(?P<token>.+)/$',
         auth_views.password_reset_confirm,
@@ -38,6 +38,7 @@ urlpatterns = patterns('',
     url(r'^password/reset/done/$',
         auth_views.password_reset_done,
         name='auth_password_reset_done'),
+    url(r'^password/$',oid_views.password_change, name='auth_password_change'),
     
     # manage account registration
     url(r'^register/$', oid_views.register, name='user_register'),
