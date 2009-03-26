@@ -27,7 +27,9 @@ except ImportError:
 
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.contrib.sites.models import Site
 from django.db import models
+from django_authopenid.signals import oid_associate
 
 class Nonce(models.Model):
     """ openid nonce """
@@ -59,3 +61,21 @@ class UserAssociation(models.Model):
     
     def __unicode__(self):
         return "Openid %s with user %s" % (self.openid_url, self.user)
+        
+    def save(self, send_email=True):
+        super(UserAssociation, self).save()
+        if send_email:
+            from django.core.mail import send_mail
+            current_site = Site.objects.get_current()
+            subject = render_to_string('authopenid/association_email_subject.txt',
+                                       { 'site': current_site,
+                                         'user': self.user})
+            message = render_to_string('authopenid/association_email.txt',
+                                       { 'site': current_site,
+                                         'user': self.user,
+                                         'openid': openid_url
+                                        })
+
+            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [new_user.email])
+        oid_associate.send(sender=self, user=self.user, openid=openid_url)
+        
