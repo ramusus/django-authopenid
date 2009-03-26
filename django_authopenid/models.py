@@ -26,9 +26,11 @@ except ImportError:
 
 
 from django.conf import settings
+from django.template.loader import render_to_string
 from django.contrib.auth.models import User
 from django.contrib.sites.models import Site
 from django.db import models
+
 from django_authopenid.signals import oid_associate
 
 class Nonce(models.Model):
@@ -67,15 +69,15 @@ class UserAssociation(models.Model):
         if send_email:
             from django.core.mail import send_mail
             current_site = Site.objects.get_current()
-            subject = render_to_string('authopenid/association_email_subject.txt',
+            subject = render_to_string('authopenid/associate_email_subject.txt',
                                        { 'site': current_site,
                                          'user': self.user})
-            message = render_to_string('authopenid/association_email.txt',
+            message = render_to_string('authopenid/associate_email.txt',
                                        { 'site': current_site,
                                          'user': self.user,
-                                         'openid': openid_url
+                                         'openid': self.openid_url
                                         })
 
-            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [new_user.email])
-        oid_associate.send(sender=self, user=self.user, openid=openid_url)
+            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [self.user.email])
+        oid_associate.send(sender=self, user=self.user, openid=self.openid_url)
         
