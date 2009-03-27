@@ -409,8 +409,8 @@ def password_change(request, template_name='authopenid/password_change_form.html
 def associate_failure(request, message, template_failure="authopenid/associate.html",
         openid_form=OpenidSigninForm, redirect_name=None, extra_context=None, **kwargs):
     
-    return render(template_name, {
-        'form': form,
+    return render(template_failure, {
+        'form': openid_form(),
         'msg': message,
     }, context_instance=_build_context(request, extra_context=extra_context))
 
@@ -480,17 +480,21 @@ def dissociate(request, template_name="authopenid/dissociate.html",
     redirect_to = request.REQUEST.get(redirect_field_name, '')
     if not redirect_to or '//' in redirect_to or ' ' in redirect_to:
         redirect_to = settings.LOGIN_REDIRECT_URL
+    # get list of associated openids
+    rels = UserAssociation.objects.filter(user__id=request.user.id)
+    associated_openids = [rel.openid_url for rel in rels]
+    if len(associated_openids) == 1 and not request.user.has_usable_password():
+        msg = _("You can't remove this openid. You should set a password first.")
+        return HttpResponseRedirect("%s?%s" % (redirect_to,
+            urllib.urlencode({ "msg": msg })))
+    
     if request.POST:
         form = dissociate_form(request.POST)
         if form.is_valid():
-            rels = UserAssociation.objects.filter(user__id=request.user.id)
-            associated_openids = [rel.openid_url for rel in rels]
             openid_url = form.cleaned_data['openid_url']
             msg = ""
             if openid_url not in associated_openids:
                 msg = _("%s is not associated to your account" % openid_url)
-            elif len(associated_openids) == 1 and not request.user.has_usable_password():
-                msg = _("You can't remove this openid. You should set a password first.")
             
             if not msg:
                 UserAssociation.objects.get(openid_url__exact=openid_url).delete()

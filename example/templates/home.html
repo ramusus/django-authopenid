@@ -5,6 +5,11 @@
 
 <p>Welcome {{ user }}</p>
 
+
+{% if request.GET.msg %}
+	<p class="warning">{{ request.GET.msg }}</p>
+{% endif %}
+
 {% if user.is_authenticated%}
 
 {% if has_openids %}
