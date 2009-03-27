@@ -421,8 +421,6 @@ def associate_success(request, identity_url, openid_response,
     openids = request.session.get('openids', [])
     openids.append(openid_)
     request.session['openids'] = openids
-    
-    print "ici"
     uassoc = UserAssociation(
                 openid_url=str(openid_),
                 user_id=request.user.id
@@ -462,7 +460,6 @@ def associate(request, template_name='authopenid/associate.html',
                     reverse('user_complete_associate'),
                     urllib.urlencode({ redirect_field_name: redirect_to })
             )
-            print redirect_url
             return ask_openid(request, 
                     form.cleaned_data['openid_url'], 
                     redirect_url, 
@@ -473,4 +470,43 @@ def associate(request, template_name='authopenid/associate.html',
     return render(template_name, {
         'form': form,
         redirect_field_name: redirect_to
-    }, context_instance=_build_context(request, extra_context=extra_context))          
+    }, context_instance=_build_context(request, extra_context=extra_context))     
+    
+@login_required
+def dissociate(request, template_name="authopenid/dissociate.html",
+        dissociate_form=OpenidDissociateForm, redirect_field_name=REDIRECT_FIELD_NAME, 
+        extra_context=None):
+        
+    redirect_to = request.REQUEST.get(redirect_field_name, '')
+    if not redirect_to or '//' in redirect_to or ' ' in redirect_to:
+        redirect_to = settings.LOGIN_REDIRECT_URL
+    if request.POST:
+        form = dissociate_form(request.POST)
+        if form.is_valid():
+            rels = UserAssociation.objects.filter(user__id=request.user.id)
+            associated_openids = [rel.openid_url for rel in rels]
+            openid_url = form.cleaned_data['openid_url']
+            msg = ""
+            if openid_url not in associated_openids:
+                msg = _("%s is not associated to your account" % openid_url)
+            elif len(associated_openids) == 1 and not request.user.has_usable_password():
+                msg = _("You can't remove this openid. You should set a password first.")
+            
+            if not msg:
+                UserAssociation.objects.get(openid_url__exact=openid_url).delete()
+                if openid_url == request.session.get('openid_url'):
+                    del request.session['openid_url']
+                msg = _("openid removed.")
+            return HttpResponseRedirect("%s?%s" % (redirect_to,
+                urllib.urlencode({ "msg": msg })))
+    else:
+        openid_url = request.GET.get('openid_url', '')
+        if not openid_url:
+            msg = _("Invalid OpenID url.")
+            return HttpResponseRedirect("%s?%s" % (redirect_to,
+                urllib.urlencode({ "msg": msg })))
+        form = dissociate_form(initial={ 'openid_url': openid_url })
+    return render(template_name, {
+            "form": form,
+            "openid_url": openid_url
+    }, context_instance=_build_context(request, extra_context=extra_context))

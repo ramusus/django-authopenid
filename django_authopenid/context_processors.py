@@ -15,7 +15,6 @@
 #
 
 
-
 def authopenid(request):
     """
     Returns context variables required by apps that use django-authopenid.
