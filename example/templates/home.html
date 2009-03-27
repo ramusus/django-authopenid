@@ -6,6 +6,20 @@
 <p>Welcome {{ user }}</p>
 
 {% if user.is_authenticated%}
+
+{% if has_openids %}
+<h2>Associated openids</h2>
+<ul>
+	{% for oid_url in associated_openids %}
+		<li>{{ oid_url }}</li>
+	{% endfor %}
+</ul>
+
+{% endif %}
+
+
+
+<h2>Actions:</h2>
 <ul>
 	<li><a href="{% url auth_password_change %}">Change password</a></li>
   	<li><a href="{% url user_signout %}">signout</a></li>

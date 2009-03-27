@@ -18,6 +18,8 @@ from django_authopenid.utils.mimeparse import best_match
 from django.http import HttpResponseRedirect
 from django.core.urlresolvers import reverse
 
+from django_authopenid.models import UserAssociation
+
 __all__ = ["OpenIDMiddleware"]
 
 class OpenIDMiddleware(object):
@@ -27,6 +29,10 @@ class OpenIDMiddleware(object):
     """
     def process_request(self, request):
         request.openid = request.session.get('openid', None)
+        request.openids = request.session.get('openids', [])
+        
+        rels = UserAssociation.objects.filter(user__id=request.user.id)
+        request.associated_openids = [rel.openid_url for rel in rels]
     
     def process_response(self, request, response):
         if response.status_code != 200 or len(response.content) < 200:
