@@ -121,3 +121,6 @@ class AssociateOpenID(forms.Form):
                     
             raise forms.ValidationError(_("You already associated this openid to your account."))
             
+class OpenidDissociateForm(OpenidSigninForm):
+    """ form used to dissociate an openid. """
+    openid_url = forms.CharField(max_length=255, widget=forms.widgets.HiddenInput())

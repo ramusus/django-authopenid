@@ -43,6 +43,7 @@ urlpatterns = patterns('',
     # manage account registration
     url(r'^associate/complete/$', oid_views.complete_associate, name='user_complete_associate'),
     url(r'^associate/$', oid_views.associate, name='user_associate'),
+    url(r'^dissociate/$', oid_views.dissociate, name='user_dissociate'),
     url(r'^register/$', oid_views.register, name='user_register'),
     url(r'^signout/$', oid_views.signout, name='user_signout'),
     url(r'^signin/complete/$', oid_views.complete_signin, name='user_complete_signin'),
