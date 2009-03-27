@@ -58,8 +58,8 @@ class UserAssociation(models.Model):
     """ 
     model to manage association between openid and user 
     """
-    openid_url = models.CharField(blank=False, max_length=255)
-    user = models.ForeignKey(User, unique=False)
+    openid_url = models.CharField(primary_key=True, blank=False, max_length=255)
+    user = models.ForeignKey(User)
     
     def __unicode__(self):
         return "Openid %s with user %s" % (self.openid_url, self.user)

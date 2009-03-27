@@ -13,24 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import re
 
 from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from django.utils.translation import ugettext as _
 from django.conf import settings
-
-import re
-
-
 # needed for some linux distributions like debian
 try:
     from openid.yadis import xri
 except ImportError:
     from yadis import xri
     
-from django_authopenid.utils import clean_next
-
+from django_authopenid.models import UserAssociation  
+    
 class OpenidSigninForm(forms.Form):
     """ signin form """
     openid_url = forms.CharField(max_length=255, 
@@ -93,3 +90,34 @@ class OpenidRegisterForm(forms.Form):
                     another.')
             raise forms.ValidationError(_("This email is already \
                 registered in our database. Please choose another."))
+                
+                
+class AssociateOpenID(forms.Form):
+    """ signin form """
+    openid_url = forms.CharField(max_length=255, 
+            widget=forms.widgets.TextInput(attrs={'class': 'required openid'}))
+
+    def __init__(self, user, *args, **kwargs):
+        super(AssociateOpenID, self).__init__(*args, **kwargs)
+        self.user = user
+            
+    def clean_openid_url(self):
+        """ test if openid is accepted """
+        if 'openid_url' in self.cleaned_data:
+            openid_url = self.cleaned_data['openid_url']
+            if xri.identifierScheme(openid_url) == 'XRI' and getattr(
+                settings, 'OPENID_DISALLOW_INAMES', False
+                ):
+                raise forms.ValidationError(_('i-names are not supported'))
+                
+            try:
+                rel = UserAssociation.objects.get(openid_url__exact=openid_url)
+            except UserAssociation.DoesNotExist:
+                return self.cleaned_data['openid_url']
+            
+            if rel.user != self.user:
+                raise forms.ValidationError(_("This openid is already \
+                    registered in our database by another account. Please choose another."))
+                    
+            raise forms.ValidationError(_("You already associated this openid to your account."))
+            

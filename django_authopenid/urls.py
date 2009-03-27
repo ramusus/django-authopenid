@@ -41,10 +41,12 @@ urlpatterns = patterns('',
     url(r'^password/$',oid_views.password_change, name='auth_password_change'),
     
     # manage account registration
+    url(r'^associate/complete/$', oid_views.complete_associate, name='user_complete_associate'),
+    url(r'^associate/$', oid_views.associate, name='user_associate'),
     url(r'^register/$', oid_views.register, name='user_register'),
-    url(r'^signin/$', oid_views.signin, name='user_signin'),
     url(r'^signout/$', oid_views.signout, name='user_signout'),
     url(r'^signin/complete/$', oid_views.complete_signin, name='user_complete_signin'),
+    url(r'^signin/$', oid_views.signin, name='user_signin'),
     url(r'^signup/$', reg_views.register, name='registration_register'),
     url(r'^signup/complete/$',direct_to_template, 
         {'template': 'registration/registration_complete.html'},
