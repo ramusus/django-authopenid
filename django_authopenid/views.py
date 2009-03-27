@@ -130,6 +130,67 @@ def not_authenticated(func):
         return func(request, *args, **kwargs)
     return decorated
 
+def signin_success(request, identity_url, openid_response,
+        redirect_field_name=REDIRECT_FIELD_NAME, **kwargs):
+    """
+    openid signin success.
+
+    If the openid is already registered, the user is redirected to 
+    url set par next or in settings with OPENID_REDIRECT_NEXT variable.
+    If none of these urls are set user is redirectd to /.
+
+    if openid isn't registered user is redirected to register page.
+    """
+
+    openid_ = from_openid_response(openid_response)
+    
+    openids = request.session.get('openids', [])
+    openids.append(openid_)
+    request.session['openids'] = openids
+    request.session['openid'] = openid_
+    try:
+        rel = UserAssociation.objects.get(openid_url__exact = str(openid_))
+    except:
+        # try to register this new user
+        redirect_to = request.REQUEST.get(redirect_field_name, '')
+        if not redirect_to or '//' in redirect_to or ' ' in redirect_to:
+            redirect_to = settings.LOGIN_REDIRECT_URL
+        return HttpResponseRedirect(
+            "%s?%s" % (reverse('user_register'),
+            urllib.urlencode({ redirect_field_name: redirect_to }))
+        )
+    user_ = rel.user
+    if user_.is_active:
+        user_.backend = "django.contrib.auth.backends.ModelBackend"
+        login(request, user_)
+        
+    redirect_to = request.GET.get(redirect_field_name, '')
+    if not redirect_to or '//' in redirect_to or ' ' in redirect_to:
+        redirect_to = settings.LOGIN_REDIRECT_URL
+    return HttpResponseRedirect(redirect_to)
+    
+def signin_failure(request, message, template_name='authopenid/signin.html',
+        redirect_field_name=REDIRECT_FIELD_NAME, openid_form=OpenidSigninForm, 
+        auth_form=AuthenticationForm, extra_context=None, **kwargs):
+    """
+    falure with openid signin. Go back to signin page.
+    
+    :attr request: request object
+    :attr template_name: string, name of template to use, default is 'authopenid/signin.html'
+    :attr redirect_field_name: string, field name used for redirect. by default 'next'
+    :attr openid_form: form use for openid signin, by default `OpenidSigninForm`
+    :attr auth_form: form object used for legacy authentification. 
+    by default AuthentificationForm form auser auth contrib.
+
+    """
+    return render(template_name, {
+        'msg': message,
+        'form1': openid_form(),
+        'form2': auth_form(),
+        redirect_field_name: request.REQUEST.get(redirect_field_name, '')
+    }, context_instance=_build_context(request, extra_context))
+
+
 @not_authenticated
 def signin(request, template_name='authopenid/signin.html', redirect_field_name=REDIRECT_FIELD_NAME,
         openid_form=OpenidSigninForm, auth_form=AuthenticationForm, 
@@ -185,46 +246,13 @@ def signin(request, template_name='authopenid/signin.html', redirect_field_name=
     }, context_instance=_build_context(request, extra_context=extra_context))
 
 def complete_signin(request, redirect_field_name=REDIRECT_FIELD_NAME,  
-        openid_form=OpenidSigninForm, auth_form=AuthenticationForm, extra_context=None):
+        openid_form=OpenidSigninForm, auth_form=AuthenticationForm, 
+        on_success=signin_success, on_failure=signin_failure, extra_context=None):
     """ in case of complete signin with openid """
-    return complete(request, signin_success, signin_failure,
+    return complete(request, on_success, on_failure,
             get_url_host(request) + reverse('user_complete_signin'),
             redirect_field_name=redirect_field_name, openid_form=openid_form, 
             auth_form=auth_form, extra_context=extra_context)
-
-
-def signin_success(request, identity_url, openid_response,
-        redirect_field_name=REDIRECT_FIELD_NAME, **kwargs):
-    """
-    openid signin success.
-
-    If the openid is already registered, the user is redirected to 
-    url set par next or in settings with OPENID_REDIRECT_NEXT variable.
-    If none of these urls are set user is redirectd to /.
-
-    if openid isn't registered user is redirected to register page.
-    """
-
-    openid_ = from_openid_response(openid_response)
-    request.session['openid'] = openid_
-    try:
-        rel = UserAssociation.objects.get(openid_url__exact = str(openid_))
-    except:
-        # try to register this new user
-        redirect_to = request.REQUEST.get(redirect_field_name, '')
-        if not redirect_to or '//' in redirect_to or ' ' in redirect_to:
-            redirect_to = settings.LOGIN_REDIRECT_URL
-        return HttpResponseRedirect(
-            "%s?%s" % (reverse('user_register'),
-            urllib.urlencode({ redirect_field_name: redirect_to }))
-        )
-    user_ = rel.user
-    if user_.is_active:
-        user_.backend = "django.contrib.auth.backends.ModelBackend"
-        login(request, user_)
-        
-    next = clean_next(request.GET.get('next'))
-    return HttpResponseRedirect(next)
 
 def is_association_exist(openid_url):
     """ test if an openid is already in database """
@@ -313,29 +341,6 @@ def register(request, template_name='authopenid/complete.html',
         'email': email
     }, context_instance=_build_context(request, extra_context=extra_context))
 
-
-def signin_failure(request, message, template_name='authopenid/signin.html',
-        redirect_field_name=REDIRECT_FIELD_NAME, openid_form=OpenidSigninForm, 
-        auth_form=AuthenticationForm, extra_context=None):
-    """
-    falure with openid signin. Go back to signin page.
-    
-    :attr request: request object
-    :attr template_name: string, name of template to use, default is 'authopenid/signin.html'
-    :attr redirect_field_name: string, field name used for redirect. by default 'next'
-    :attr openid_form: form use for openid signin, by default `OpenidSigninForm`
-    :attr auth_form: form object used for legacy authentification. 
-    by default AuthentificationForm form auser auth contrib.
-
-    """
-    return render(template_name, {
-        'msg': message,
-        'form1': openid_form(),
-        'form2': auth_form(),
-        redirect_field_name: request.REQUEST.get(redirect_field_name, '')
-    }, context_instance=_build_context(request, extra_context))
-
-
 @login_required
 def signout(request):
     """
@@ -401,8 +406,8 @@ def password_change(request, template_name='authopenid/password_change_form.html
     }, context_instance=_build_context(request, extra_context=extra_context))
 
 @login_required
-def associate_failure(request, message, template_name="authopenid/associate.html",
-        openid_form=OpenidSigninForm, redirect_name=None, extra_context=None):
+def associate_failure(request, message, template_failure="authopenid/associate.html",
+        openid_form=OpenidSigninForm, redirect_name=None, extra_context=None, **kwargs):
     
     return render(template_name, {
         'form': form,
@@ -410,34 +415,62 @@ def associate_failure(request, message, template_name="authopenid/associate.html
     }, context_instance=_build_context(request, extra_context=extra_context))
 
 @login_required
-def associate_complete(request, template_name="authopenid/associate_complete.html", 
-        extra_context=None):
-    return complete(request, signin_success, signin_failure,
-            get_url_host(request) + reverse('user_complete_signin'))
+def associate_success(request, identity_url, openid_response,
+        redirect_field_name=REDIRECT_FIELD_NAME, send_email=True, **kwargs):
+    openid_ = from_openid_response(openid_response)
+    openids = request.session.get('openids', [])
+    openids.append(openid_)
+    request.session['openids'] = openids
+    
+    print "ici"
+    uassoc = UserAssociation(
+                openid_url=str(openid_),
+                user_id=request.user.id
+    )
+    uassoc.save(send_email=send_email)
+    
+    redirect_to = request.GET.get(redirect_field_name, '')
+    if not redirect_to or '//' in redirect_to or ' ' in redirect_to:
+        redirect_to = settings.LOGIN_REDIRECT_URL
+    return HttpResponseRedirect(redirect_to)
+
+@login_required
+def complete_associate(request, redirect_field_name=REDIRECT_FIELD_NAME,
+        template_failure='authopenid/associate.html', openid_form=AssociateOpenID, 
+        redirect_name=None, on_success=associate_success, on_failure=associate_failure,
+        send_email=True, extra_context=None):
+        
+    return complete(request, on_success, on_failure,
+            get_url_host(request) + reverse('user_complete_associate'),
+            redirect_field_name=redirect_field_name, openid_form=openid_form, 
+            template_failure=template_failure, redirect_name=redirect_name, 
+            send_email=send_email, extra_context=extra_context)
     
 @login_required
 def associate(request, template_name='authopenid/associate.html', 
-        openid_form=OpenidSigninForm, redirect_name=None,
+        openid_form=AssociateOpenID, redirect_field_name=REDIRECT_FIELD_NAME,
         on_failure=associate_failure, extra_context=None):
     
+    redirect_to = request.REQUEST.get(redirect_field_name, '')
     if request.POST:            
-        form = openid_form(data=request.POST)
+        form = openid_form(request.user, data=request.POST)
         if form.is_valid():
-            redirect_name = redirect_name or 'authopenid_associate_complete'
-            redirect_to = "%s%s" % (
+            if not redirect_to or '//' in redirect_to or ' ' in redirect_to:
+                redirect_to = settings.LOGIN_REDIRECT_URL
+            redirect_url = "%s%s?%s" % (
                     get_url_host(request),
-                    reverse(redirect_name)
+                    reverse('user_complete_associate'),
+                    urllib.urlencode({ redirect_field_name: redirect_to })
             )
+            print redirect_url
             return ask_openid(request, 
-                    form1.cleaned_data['openid_url'], 
-                    redirect_to, 
+                    form.cleaned_data['openid_url'], 
+                    redirect_url, 
                     on_failure=on_failure, 
                     sreg_request=None)
     else:
-        form = openid_form()
+        form = openid_form(request.user)
     return render(template_name, {
         'form': form,
-    }, context_instance=_build_context(request, extra_context=extra_context))
-    
-
-            
+        redirect_field_name: redirect_to
+    }, context_instance=_build_context(request, extra_context=extra_context))          
