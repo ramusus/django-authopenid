@@ -34,6 +34,8 @@ Contents:
    models
    forms
 
+   changes
+
 * Follow development on `Bitbucket <http://hg.e-engura.org/django-authopenid/>`_.
 * Report bugs, report features and browse the source through `Tracker <http://hg.e-engura.org/django-authopenid/issues/>`_.
 
