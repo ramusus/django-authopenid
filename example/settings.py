@@ -62,6 +62,7 @@ TEMPLATE_DIRS = (
 )
 
 LOGIN_REDIRECT_URL = '/'
+ACCOUNT_ACTIVATION_DAYS = 10
 
 INSTALLED_APPS = (
     'django.contrib.auth',
