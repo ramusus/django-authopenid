@@ -26,7 +26,8 @@ try:
 except ImportError:
     from yadis import xri
     
-from django_authopenid.models import UserAssociation  
+from django_authopenid.models import UserAssociation
+
     
 class OpenidSigninForm(forms.Form):
     """ signin form """
@@ -93,7 +94,7 @@ class OpenidRegisterForm(forms.Form):
                 
                 
 class AssociateOpenID(forms.Form):
-    """ signin form """
+    """ new openid association form """
     openid_url = forms.CharField(max_length=255, 
             widget=forms.widgets.TextInput(attrs={'class': 'required openid'}))
 

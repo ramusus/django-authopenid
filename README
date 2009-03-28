@@ -1,76 +1,11 @@
-# django_authopenid 
+#django_authopenid 
 
 Author : Benoît Chesneau <benoitc@metavers.net>
 Url : [http://bitbucket.org/benoitc/django-authopenid/](http://bitbucket.org/benoitc/django-authopenid/)
+License: Apache License 2
 
-Updated version of this doc is always here :
+This package provide the django-authopenid application that allow you to authenticate your users with OpenID in Django.
 
-[http://bitbucket.org/benoitc/django-authopenid/wiki](http://bitbucket.org/benoitc/django-authopenid/wiki)
-
-
-## Introduction
-
-Django authentification application **with openid using django auth contrib**.
-
-This application allow a user to connect to you website with :
-
- * legacy account : username/password
- * openid url
-
-Idee is having workflow to integrate openid and _legacy_ authentification.
-
-If the user connect with an openid he could associate it with its legaccy account or just create a new django account. When the user is connected you could manage him like you usually do with auth contrib or [django-registration](http://bitbucket.org/ubernostrum/django-registration/):
-
-http://www.djangoproject.com/documentation/authentication/ 
+For more information go [here](http://bitbucket.org/benoitc/django-authopenid/).
 
 
-## Requirements
-
- * [django 1.x](http://djangoproject.org)
- * [python-openid 2.x](http://openidenabled.com/python-openid/)
-
-## Set your django project
-
-To use django_authopenid add `django_authopenid.middleware.OpenIDMiddleware` to MIDDLEWARE_CLASSES and
- `'django_authopenid'` to INSTALLED_APP. 
-
-then add django_authopenid.urls to urls.py, for example :
-
-	(r'^account/', include('django_authopenid.urls')),
-
-so all django_authopenid view will be available under account/ path.
-
-Set also your LOGIN_URL in settings.py to something like this:
-
-	ugettext = lambda s: s
-	LOGIN_URL = '/%s%s' % (ugettext('account/'), ugettext('signin/'))
-
-
-To install tables, run :
-
-	python manage.py syncdb
-
-
-
-## Use it
-
-### Urls
-
-all code is documented so you could esayly know what do a view.
-
-  * signin/signup :
-  * /account/signin : go to signin page
-  * /account/signout : signout url
-  * /account/signin/complete/ : register openid after signin 
-  * /account/signup : legacy authentification 
-  * /account/sendpw/password : send a new password
-
-
-### Templates
-
-Templates are in *templates/authopenid* folder :
-
-
- * complete.html  : complete page after signin (register openid)
- * signin.html : signin page
- 
