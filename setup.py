@@ -38,8 +38,8 @@ setup(
 """Django authentification application with openid using django auth contrib. Rhis application allow a user to connect to you website with a legacy account (username/password) or an openid url.""",
     author = 'Benoit Chesneau',
     author_email = 'bchesneau@gmail.com',
-    license = 'BSD',
-    url = 'http://code.google.com/p/django-authopenid/',
+    license = 'Apache License 2',
+    url = 'http://hg.e-engura.org/django-authopenid/',
     zip_safe = False,
 
     classifiers = [
@@ -47,6 +47,7 @@ setup(
         'Environment :: Web Environment',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',
+        'License :: OSI Approved :: Apache Software License',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Topic :: Internet :: WWW/HTTP',
