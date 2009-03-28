@@ -33,6 +33,8 @@ from django.db import models
 
 from django_authopenid.signals import oid_associate
 
+__all__ = ['Nonce', 'Association', 'UserAssociation']
+
 class Nonce(models.Model):
     """ openid nonce """
     server_url = models.CharField(max_length=255)

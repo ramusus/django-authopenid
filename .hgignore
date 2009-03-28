@@ -19,6 +19,9 @@ store/*
 django_authopenid.egg*
 dist
 *.db
+docs/_build/doctrees
+docs/_build/html
+
 
 syntax: regexp
 .*\#.*\#$
