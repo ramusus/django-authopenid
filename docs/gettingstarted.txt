@@ -118,6 +118,8 @@ signout, and password change/reset views.
 
 .. seealso:: :ref:`views-ref` and consult `the Django authentication documentation <http://www.djangoproject.com/documentation/authentication/>`_  and `django-registration documentation <http://bitbucket.org/ubernostrum/django-registration/>`_ for details on the templates and contexts used by views of these modules.
 	
+.. warning:: Don't forget to setup your mail server access if you want to send mail.
+
 
 How it works
 ============

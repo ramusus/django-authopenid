@@ -436,12 +436,12 @@ def password_change(request, template_name='authopenid/password_change_form.html
 
 @login_required
 def associate_failure(request, message, template_failure="authopenid/associate.html",
-        openid_form=OpenidSigninForm, redirect_name=None, extra_context=None, **kwargs):
+        openid_form=AssociateOpenID, redirect_name=None, extra_context=None, **kwargs):
         
     """ function used when new openid association fail"""
     
     return render(template_failure, {
-        'form': openid_form(),
+        'form': openid_form(request.user),
         'msg': message,
     }, context_instance=_build_context(request, extra_context=extra_context))
 
