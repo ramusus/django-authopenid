@@ -424,9 +424,7 @@ def password_change(request, template_name='authopenid/password_change_form.html
                                 urllib.urlencode({ "msg": msg }))
             return HttpResponseRedirect(redirect_to)
     else:
-        
         form = change_form(request.user)
-        print form.__class__.__name__
 
     return render(template_name, {
         'form': form,
