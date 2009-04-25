@@ -422,7 +422,6 @@ def password_change(request, template_name='authopenid/password_change_form.html
             msg = urllib.quote(_("Password changed"))
             redirect_to = "%s?%s" % (post_change_redirect, 
                                 urllib.urlencode({ "msg": msg }))
-            print redirect_to
             return HttpResponseRedirect(redirect_to)
     else:
         
@@ -522,12 +521,13 @@ def associate(request, template_name='authopenid/associate.html',
 @login_required
 def dissociate(request, template_name="authopenid/dissociate.html",
         dissociate_form=OpenidDissociateForm, redirect_field_name=REDIRECT_FIELD_NAME, 
-        extra_context=None):
+        default_redirect=settings.LOGIN_REDIRECT_URL, extra_context=None):
         
     """ view used to dissociate an openid from an account """
     redirect_to = request.REQUEST.get(redirect_field_name, '')
     if not redirect_to or '//' in redirect_to or ' ' in redirect_to:
-        redirect_to = settings.LOGIN_REDIRECT_URL
+        redirect_to = default_redirect
+        
     # get list of associated openids
     rels = UserAssociation.objects.filter(user__id=request.user.id)
     associated_openids = [rel.openid_url for rel in rels]
