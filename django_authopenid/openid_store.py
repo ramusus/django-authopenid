@@ -43,7 +43,7 @@ class DjangoOpenIDStore(openid.store.interface.OpenIDStore):
             handle = association.handle,
             secret = base64.encodestring(association.secret),
             issued = association.issued,
-            lifetime = association.issued,
+            lifetime = association.lifetime,
             assoc_type = association.assoc_type
         )
         assoc.save()
@@ -61,17 +61,22 @@ class DjangoOpenIDStore(openid.store.interface.OpenIDStore):
         if not assocs:
             return None
         associations = []
+        expired = []
         for assoc in assocs:
             association = OIDAssociation(
                 assoc.handle, base64.decodestring(assoc.secret), assoc.issued,
                 assoc.lifetime, assoc.assoc_type
             )
             if association.getExpiresIn() == 0:
-                self.removeAssociation(server_url, assoc.handle)
+                expired.append(assoc)
             else:
                 associations.append((association.issued, association))
+                
+        for assoc in expired:
+            assoc.delete()
         if not associations:
             return None
+        associations.sort()
         return associations[-1][1]
     
     def removeAssociation(self, server_url, handle):
@@ -102,17 +107,26 @@ class DjangoOpenIDStore(openid.store.interface.OpenIDStore):
             )
             ononce.save()
             return True
-        
-        ononce.delete()
 
         return False
    
-    #FIX IT
-    def cleanupNonce(self):
-        Nonce.objects.filter(timestamp < (int(time.time()) - nonce.SKEW)).delete()
+    def cleanupNonces(self, _now=None):
+        if _now is None:
+            _now = int(time.time())
+        expired = Nonce.objects.filter(timestamp__lt=(_now - openid.store.nonce.SKEW))
+        count = expired.count()
+        if count:
+            expired.delete()
+        return count
 
     def cleanupAssociations(self):
-        Association.objects.extra(where=['issued + lifetime<(%s)' % time.time()]).delete()
+        now = int(time.time())
+        expired = Association.objects.extra(
+            where=['issued + lifetime < %d' % now])
+        count = expired.count()
+        if count:
+            expired.delete()
+        return count
 
     def getAuthKey(self):
         # Use first AUTH_KEY_LEN characters of md5 hash of SECRET_KEY
