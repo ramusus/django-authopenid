@@ -80,6 +80,7 @@ class UserAssociation(models.Model):
                                          'openid': self.openid_url
                                         })
 
-            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [self.user.email])
+            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [self.user.email],
+                    fail_silently=True)
         oid_associate.send(sender=self, user=self.user, openid=self.openid_url)
         
