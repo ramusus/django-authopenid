@@ -85,7 +85,8 @@ def ask_openid(request, openid_url, redirect_to, on_failure=None,
     redirect_url = auth_request.redirectURL(trust_root, redirect_to)
     return HttpResponseRedirect(redirect_url)
 
-def complete(request, on_success=None, on_failure=None, return_to=None, **kwargs):
+def complete(request, on_success=None, on_failure=None, return_to=None, 
+    **kwargs):
     """ complete openid signin """
     on_success = on_success or default_on_success
     on_failure = on_failure or default_on_failure
@@ -176,14 +177,16 @@ def signin_failure(request, message, template_name='authopenid/signin.html',
     falure with openid signin. Go back to signin page.
     
     :attr request: request object
-    :attr template_name: string, name of template to use, default is 'authopenid/signin.html'
-    :attr redirect_field_name: string, field name used for redirect. by default 'next'
+    :attr template_name: string, name of template to use, default is 
+    'authopenid/signin.html'
+    :attr redirect_field_name: string, field name used for redirect. by default
+    'next'
     :attr openid_form: form use for openid signin, by default `OpenidSigninForm`
     :attr auth_form: form object used for legacy authentification. 
     by default AuthentificationForm form auser auth contrib.
-    :attr extra_context: A dictionary of variables to add to the template context. Any
-    callable object in this dictionary will be called to produce the
-    end result which appears in the context.
+    :attr extra_context: A dictionary of variables to add to the template 
+    context. Any callable object in this dictionary will be called to produce 
+    the end result which appears in the context.
     """
     return render(template_name, {
         'msg': message,
@@ -194,20 +197,23 @@ def signin_failure(request, message, template_name='authopenid/signin.html',
 
 
 @not_authenticated
-def signin(request, template_name='authopenid/signin.html', redirect_field_name=REDIRECT_FIELD_NAME,
-        openid_form=OpenidSigninForm, auth_form=AuthenticationForm, 
-        on_failure=None, extra_context=None):
-    """Signin page. It manage the legacy authentification (user/password)  and authentification with openid.
+def signin(request, template_name='authopenid/signin.html', 
+        redirect_field_name=REDIRECT_FIELD_NAME, openid_form=OpenidSigninForm,
+        auth_form=AuthenticationForm, on_failure=None, extra_context=None):
+    """Signin page. It manage the legacy authentification (user/password)  
+    and authentification with openid.
 
     :attr request: request object
     :attr template_name: string, name of template to use
-    :attr redirect_field_name: string, field name used for redirect. by default 'next'
-    :attr openid_form: form use for openid signin, by default `OpenidSigninForm`
+    :attr redirect_field_name: string, field name used for redirect. by 
+    default 'next'
+    :attr openid_form: form use for openid signin, by default 
+    `OpenidSigninForm`
     :attr auth_form: form object used for legacy authentification. 
     By default AuthentificationForm form auser auth contrib.
-    :attr extra_context: A dictionary of variables to add to the template context. Any
-    callable object in this dictionary will be called to produce the
-    end result which appears in the context.
+    :attr extra_context: A dictionary of variables to add to the 
+    template context. Any callable object in this dictionary will 
+    be called to produce the end result which appears in the context.
     """
     if on_failure is None:
         on_failure = signin_failure
@@ -249,18 +255,21 @@ def signin(request, template_name='authopenid/signin.html', redirect_field_name=
 
 def complete_signin(request, redirect_field_name=REDIRECT_FIELD_NAME,  
         openid_form=OpenidSigninForm, auth_form=AuthenticationForm, 
-        on_success=signin_success, on_failure=signin_failure, extra_context=None):
+        on_success=signin_success, on_failure=signin_failure, 
+        extra_context=None):
     """
     in case of complete signin with openid 
 
     :attr request: request object
-    :attr openid_form: form use for openid signin, by default `OpenidSigninForm`
+    :attr openid_form: form use for openid signin, by default 
+    `OpenidSigninForm`
     :attr auth_form: form object used for legacy authentification. 
     by default AuthentificationForm form auser auth contrib.
     :attr on_success: callbale, function used when openid auth success
     :attr on_failure: callable, function used when openid auth failed.
-    :attr extra_context: A dictionary of variables to add to the template context. Any
-    callable object in this dictionary will be called to produce the
+    :attr extra_context: A dictionary of variables to add to the template 
+    context.
+    Any callable object in this dictionary will be called to produce the
     end result which appears in the context.  
     """
     return complete(request, on_success, on_failure,
@@ -279,16 +288,18 @@ def is_association_exist(openid_url):
     
 def register_account(form, openid_url):
     """ create an account """
-    user = User.objects.create_user(form.cleaned_data['username'], form.cleaned_data['email'])
+    user = User.objects.create_user(form.cleaned_data['username'], 
+                            form.cleaned_data['email'])
     user.backend = "django.contrib.auth.backends.ModelBackend"
     oid_register.send(sender=user, openid=openid_url)
     return user
 
 @not_authenticated
 def register(request, template_name='authopenid/complete.html', 
-            redirect_field_name=REDIRECT_FIELD_NAME, register_form=OpenidRegisterForm, 
-            auth_form=AuthenticationForm, register_account=register_account, 
-            send_email=True, extra_context=None):
+            redirect_field_name=REDIRECT_FIELD_NAME, 
+            register_form=OpenidRegisterForm, auth_form=AuthenticationForm, 
+            register_account=register_account, send_email=True, 
+            extra_context=None):
     """
     register an openid.
 
@@ -299,24 +310,29 @@ def register(request, template_name='authopenid/complete.html',
     to the openid.
 
     :attr request: request object
-    :attr template_name: string, name of template to use, 'authopenid/complete.html' by default
-    :attr redirect_field_name: string, field name used for redirect. by default 'next'
-    :attr register_form: form use to create a new account. By default `OpenidRegisterForm`
+    :attr template_name: string, name of template to use, 
+    'authopenid/complete.html' by default
+    :attr redirect_field_name: string, field name used for redirect. by default 
+    'next'
+    :attr register_form: form use to create a new account. By default 
+    `OpenidRegisterForm`
     :attr auth_form: form object used for legacy authentification. 
     by default `OpenidVerifyForm` form auser auth contrib.
     :attr register_account: callback used to create a new account from openid. 
     It take the register_form as param.
-    :attr send_email: boolean, by default True. If True, an email will be sent to the user.
-    :attr extra_context: A dictionary of variables to add to the template context. Any
-    callable object in this dictionary will be called to produce the
-    end result which appears in the context.
+    :attr send_email: boolean, by default True. If True, an email will be sent 
+    to the user.
+    :attr extra_context: A dictionary of variables to add to the template 
+    context. Any callable object in this dictionary will be called to produce 
+    the end result which appears in the context.
     """
     is_redirect = False
     redirect_to = request.REQUEST.get(redirect_field_name, '')
     openid_ = request.session.get('openid', None)
     if openid_ is None or not openid_:
-        return HttpResponseRedirect("%s?%s" % (reverse('user_signin') ,
-                                urllib.urlencode({ redirect_field_name: redirect_to })))
+        return HttpResponseRedirect("%s?%s" % (reverse('user_signin'),
+                                urllib.urlencode({ 
+                                redirect_field_name: redirect_to })))
 
     nickname = openid_.sreg.get('nickname', '')
     email = openid_.sreg.get('email', '')
@@ -386,21 +402,26 @@ def xrdf(request, template_name='authopenid/yadis.xrdf'):
         
         
 @login_required
-def password_change(request, template_name='authopenid/password_change_form.html', 
-        set_password_form=SetPasswordForm, change_password_form=PasswordChangeForm,
-        post_change_redirect=None, extra_context=None):
+def password_change(request, 
+        template_name='authopenid/password_change_form.html', 
+        set_password_form=SetPasswordForm, 
+        change_password_form=PasswordChangeForm, post_change_redirect=None, 
+        extra_context=None):
     """
     View that allow a user to add a password to its account or change it.
 
     :attr request: request object
-    :attr template_name: string, name of template to use, 'authopenid/password_change_form.html' by default
-    :attr set_password_form: form use to create a new password. By default ``django.contrib.auth.forms.SetPasswordForm``
+    :attr template_name: string, name of template to use, 
+    'authopenid/password_change_form.html' by default
+    :attr set_password_form: form use to create a new password. By default 
+    ``django.contrib.auth.forms.SetPasswordForm``
     :attr change_password_form: form objectto change passworf. 
-    by default `django.contrib.auth.forms.SetPasswordForm.PasswordChangeForm` form auser auth contrib.
+    by default `django.contrib.auth.forms.SetPasswordForm.PasswordChangeForm` 
+    form auser auth contrib.
     :attr post_change_redirect: url used to redirect user after password change.
     It take the register_form as param.
-    :attr extra_context: A dictionary of variables to add to the template context. Any
-    callable object in this dictionary will be called to produce the
+    :attr extra_context: A dictionary of variables to add to the template context. 
+    Any callable object in this dictionary will be called to produce the
     end result which appears in the context.
     """
     if post_change_redirect is None:
@@ -432,8 +453,10 @@ def password_change(request, template_name='authopenid/password_change_form.html
     }, context_instance=_build_context(request, extra_context=extra_context))
 
 @login_required
-def associate_failure(request, message, template_failure="authopenid/associate.html",
-        openid_form=AssociateOpenID, redirect_name=None, extra_context=None, **kwargs):
+def associate_failure(request, message, 
+        template_failure="authopenid/associate.html", 
+        openid_form=AssociateOpenID, redirect_name=None, 
+        extra_context=None, **kwargs):
         
     """ function used when new openid association fail"""
     
@@ -445,8 +468,8 @@ def associate_failure(request, message, template_failure="authopenid/associate.h
 @login_required
 def associate_success(request, identity_url, openid_response,
         redirect_field_name=REDIRECT_FIELD_NAME, send_email=True, **kwargs):
-        
-    """ function used when new openid association success. redirect the user
+    """ 
+    function used when new openid association success. redirect the user
     """
     openid_ = from_openid_response(openid_response)
     openids = request.session.get('openids', [])
@@ -465,8 +488,9 @@ def associate_success(request, identity_url, openid_response,
 
 @login_required
 def complete_associate(request, redirect_field_name=REDIRECT_FIELD_NAME,
-        template_failure='authopenid/associate.html', openid_form=AssociateOpenID, 
-        redirect_name=None, on_success=associate_success, on_failure=associate_failure,
+        template_failure='authopenid/associate.html', 
+        openid_form=AssociateOpenID, redirect_name=None, 
+        on_success=associate_success, on_failure=associate_failure,
         send_email=True, extra_context=None):
         
     """ in case of complete association with openid """
@@ -485,12 +509,18 @@ def associate(request, template_name='authopenid/associate.html',
     """View that allow a user to associate a new openid to its account.
     
     :attr request: request object
-    :attr template_name: string, name of template to use, 'authopenid/associate.html' by default
-    :attr openid_form: form use enter openid url. By default ``django_authopenid.forms.AssociateOpenID``
-    :attr redirect_field_name: string, field name used for redirect. by default 'next'
+    :attr template_name: string, name of template to use, 
+    'authopenid/associate.html' by default
+    :attr openid_form: form use enter openid url. By default 
+    ``django_authopenid.forms.AssociateOpenID``
+    :attr redirect_field_name: string, field name used for redirect. 
+    by default 'next'
     :attr on_success: callbale, function used when openid auth success
-    :attr on_failure: callable, function used when openid auth failed. by default ``django_authopenid.views.associate_failure`
-    :attr extra_context: A dictionary of variables to add to the template context. A callable object in this dictionary will be called to produce the end result which appears in the context.
+    :attr on_failure: callable, function used when openid auth failed. 
+    by default ``django_authopenid.views.associate_failure`
+    :attr extra_context: A dictionary of variables to add to the template
+    context. A callable object in this dictionary will be called to produce 
+    the end result which appears in the context.
     """
     
     redirect_to = request.REQUEST.get(redirect_field_name, '')
@@ -518,7 +548,8 @@ def associate(request, template_name='authopenid/associate.html',
     
 @login_required
 def dissociate(request, template_name="authopenid/dissociate.html",
-        dissociate_form=OpenidDissociateForm, redirect_field_name=REDIRECT_FIELD_NAME, 
+        dissociate_form=OpenidDissociateForm, 
+        redirect_field_name=REDIRECT_FIELD_NAME, 
         default_redirect=settings.LOGIN_REDIRECT_URL, extra_context=None):
         
     """ view used to dissociate an openid from an account """
@@ -530,7 +561,8 @@ def dissociate(request, template_name="authopenid/dissociate.html",
     rels = UserAssociation.objects.filter(user__id=request.user.id)
     associated_openids = [rel.openid_url for rel in rels]
     if len(associated_openids) == 1 and not request.user.has_usable_password():
-        msg = _("You can't remove this openid. You should set a password first.")
+        msg = _("You can't remove this openid. "
+        "You should set a password first.")
         return HttpResponseRedirect("%s?%s" % (redirect_to,
             urllib.urlencode({ "msg": msg })))
     
