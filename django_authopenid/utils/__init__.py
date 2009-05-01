@@ -34,7 +34,7 @@ class OpenID(object):
         self.issued = issued
         self.attrs = attrs or {}
         self.sreg = sreg_ or {}
-        self.ax = ax_
+        self.ax = ax_ or {}
         self.is_iname = (xri.identifierScheme(openid_) == 'XRI')
     
     def __repr__(self):
@@ -43,18 +43,18 @@ class OpenID(object):
     def __str__(self):
         return self.openid
     
-SUPPORTED_EXTENSIONS = {
-    "http://openid.net/srv/ax/1.0": ax,
-    'http://openid.net/sreg/1.0': sreg,
-    'http://openid.net/extensions/sreg/1.1': sreg
-}   
-
 def discover_extensions(openid_url):
     service = discover(openid_url)
-    found = []
+    use_ax = False
+    use_sreg = False
     for endpoint in service[1]:
-        found = filter(endpoint.usesExtension, SUPPORTED_EXTENSIONS.keys())
-    return found
+        if not use_sreg:
+            use_sreg = sreg.supportsSReg(endpoint)
+        if not use_ax:
+            use_ax = endpoint.usesExtension("http://openid.net/srv/ax/1.0")
+        if use_ax and use_sreg: break
+    return use_ax, use_sreg
+
 
 DEFAULT_NEXT = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
 def clean_next(next):
@@ -72,10 +72,13 @@ def from_openid_response(openid_response):
     issued = int(time.time())
     sreg_resp = sreg.SRegResponse.fromSuccessResponse(openid_response) \
             or []
-    
+    ax_resp = ax.FetchResponse.fromSuccessResponse(openid_response)
+    ax_args = ax_resp.getExtensionArgs()
+    ax_resp.parseExtensionArgs(ax_args)
+
     return OpenID(
         openid_response.identity_url, issued, openid_response.signed_fields, 
-         dict(sreg_resp)
+        dict(sreg_resp), ax_resp.data
     )
     
 def get_url_host(request):

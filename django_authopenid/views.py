@@ -36,7 +36,7 @@ from django.core.mail import send_mail
 from openid.consumer.consumer import Consumer, \
     SUCCESS, CANCEL, FAILURE, SETUP_NEEDED
 from openid.consumer.discover import DiscoveryFailure
-from openid.extensions import sreg
+from openid.extensions import sreg, ax
 # needed for some linux distributions like debian
 try:
     from openid.yadis import xri
@@ -63,6 +63,8 @@ def _build_context(request, extra_context=None):
 def ask_openid(request, openid_url, redirect_to, on_failure=None):
     """ basic function to ask openid and return response """
     on_failure = on_failure or signin_failure
+    sreg_req = None
+    sreg_ax = None
     
     trust_root = getattr(
         settings, 'OPENID_TRUST_ROOT', get_url_host(request) + '/'
@@ -79,11 +81,35 @@ def ask_openid(request, openid_url, redirect_to, on_failure=None):
         msg = _("The OpenID %s was invalid" % openid_url)
         return on_failure(request, msg)
     
-    # set sreg extension
-    # we always ask for nickname and email
-    sreg_fields = getattr(settings, 'OPENID_SREG', {})
-    sreg_fields.update({ "optional": ['nickname', 'email'] })
-    auth_request.addExtension(sreg.SRegRequest(**sreg_fields))
+    # get capabilities
+    use_ax, use_sreg = discover_extensions(openid_url)
+    if use_sreg:
+        # set sreg extension
+        # we always ask for nickname and email
+        sreg_attrs = getattr(settings, 'OPENID_SREG', {})
+        sreg_attrs.update({ "optional": ['nickname', 'email'] })
+        sreg_req = sreg.SRegRequest(**sreg_attrs)
+    if use_ax:
+        # set ax extension
+        # we always ask for nickname and email
+        ax_req = ax.FetchRequest()
+        ax_req.add(ax.AttrInfo('http://schema.openid.net/contact/email', 
+                                alias='email', required=True))
+        ax_req.add(ax.AttrInfo('http://schema.openid.net/namePerson/friendly', 
+                                alias='nickname', required=True))
+                      
+        # add custom ax attrs          
+        ax_attrs = getattr(settings, 'OPENID_AX', [])
+        for attr in ax_attrs:
+            if len(attr) == 2:
+                ax_req.add(ax.AttrInfo(attr[0], required=alias[1]))
+            else:
+                ax_req.add(ax.AttrInfo(attr[0]))
+       
+    if sreg_req is not None:
+        auth_request.addExtension(sreg_req)
+    if ax_req is not None:
+        auth_request.addExtension(ax_req)
     
     redirect_url = auth_request.redirectURL(trust_root, redirect_to)
     return HttpResponseRedirect(redirect_url)
@@ -99,7 +125,6 @@ def complete(request, on_success=None, on_failure=None, return_to=None,
     params = dict((k,smart_unicode(v)) for k, v in request.GET.items())
     openid_response = consumer.complete(params, return_to)
             
-    
     if openid_response.status == SUCCESS:
         return on_success(request, openid_response.identity_url,
                 openid_response, **kwargs)
@@ -335,8 +360,17 @@ def register(request, template_name='authopenid/complete.html',
                                 urllib.urlencode({ 
                                 redirect_field_name: redirect_to })))
 
-    nickname = openid_.sreg.get('nickname', '')
-    email = openid_.sreg.get('email', '')
+    nickname = ''
+    email = ''
+    if openid_.sreg:
+        nickname = openid_.sreg.get('nickname', '')
+        email = openid_.sreg.get('email', '')
+    if openid_.ax and not nickname or not email:
+        if openid_.ax.get('http://schema.openid.net/namePerson/friendly', False):
+            nickname = openid_.ax.get('http://schema.openid.net/namePerson/friendly')[0]
+        if openid_.ax.get('http://schema.openid.net/contact/email', False):
+            email = openid_.ax.get('http://schema.openid.net/contact/email')[0]
+        
     
     form1 = register_form(initial={
         'username': nickname,
@@ -346,7 +380,6 @@ def register(request, template_name='authopenid/complete.html',
         'username': nickname,
     })
     
-    print openid_.sreg
     if request.POST:
         user_ = None
         if not redirect_to or '//' in redirect_to or ' ' in redirect_to:
