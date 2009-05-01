@@ -286,12 +286,12 @@ def is_association_exist(openid_url):
         is_exist = False
     return is_exist
     
-def register_account(form, openid_url):
+def register_account(form, _openid):
     """ create an account """
     user = User.objects.create_user(form.cleaned_data['username'], 
                             form.cleaned_data['email'])
     user.backend = "django.contrib.auth.backends.ModelBackend"
-    oid_register.send(sender=user, openid=openid_url)
+    oid_register.send(sender=user, openid=_openid)
     return user
 
 @not_authenticated
@@ -352,7 +352,7 @@ def register(request, template_name='authopenid/complete.html',
         if 'email' in request.POST.keys():
             form1 = register_form(data=request.POST)
             if form1.is_valid():
-                user_ = register_account(form1, str(openid_))
+                user_ = register_account(form1, openid_)
         else:
             form2 = auth_form(data=request.POST)
             if form2.is_valid():
@@ -436,8 +436,6 @@ def password_change(request,
 
     if request.POST:
         form = change_form(request.user, request.POST)
-        print form.__class__.__name__
-        print form.is_valid()
         if form.is_valid():
             form.save()
             msg = urllib.quote(_("Password changed"))
