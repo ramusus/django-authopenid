@@ -60,8 +60,7 @@ def _build_context(request, extra_context=None):
         context[key] = callable(value) and value() or value
     return context    
     
-def ask_openid(request, openid_url, redirect_to, on_failure=None,
-        sreg_request=None):
+def ask_openid(request, openid_url, redirect_to, on_failure=None):
     """ basic function to ask openid and return response """
     on_failure = on_failure or signin_failure
     
@@ -79,9 +78,13 @@ def ask_openid(request, openid_url, redirect_to, on_failure=None,
     except DiscoveryFailure:
         msg = _("The OpenID %s was invalid" % openid_url)
         return on_failure(request, msg)
-
-    if sreg_request:
-        auth_request.addExtension(sreg_request)
+    
+    # set sreg extension
+    # we always ask for nickname and email
+    sreg_fields = getattr(settings, 'OPENID_SREG', {})
+    sreg_fields.update({ "optional": ['nickname', 'email'] })
+    auth_request.addExtension(sreg.SRegRequest(**sreg_fields))
+    
     redirect_url = auth_request.redirectURL(trust_root, redirect_to)
     return HttpResponseRedirect(redirect_url)
 
@@ -227,7 +230,6 @@ def signin(request, template_name='authopenid/signin.html',
         if 'openid_url' in request.POST.keys():
             form1 = openid_form(data=request.POST)
             if form1.is_valid():
-                sreg_req = sreg.SRegRequest(optional=['nickname', 'email'])
                 redirect_url = "%s%s?%s" % (
                         get_url_host(request),
                         reverse('user_complete_signin'), 
@@ -236,8 +238,7 @@ def signin(request, template_name='authopenid/signin.html',
                 return ask_openid(request, 
                         form1.cleaned_data['openid_url'], 
                         redirect_url, 
-                        on_failure=on_failure, 
-                        sreg_request=sreg_req)
+                        on_failure=on_failure)
         else:
             # perform normal django authentification
             form2 = auth_form(data=request.POST)
@@ -345,6 +346,7 @@ def register(request, template_name='authopenid/complete.html',
         'username': nickname,
     })
     
+    print openid_.sreg
     if request.POST:
         user_ = None
         if not redirect_to or '//' in redirect_to or ' ' in redirect_to:

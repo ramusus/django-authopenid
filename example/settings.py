@@ -64,6 +64,10 @@ TEMPLATE_DIRS = (
 LOGIN_REDIRECT_URL = '/'
 ACCOUNT_ACTIVATION_DAYS = 10
 
+OPENID_SREG = {
+    "required": ['fullname', 'country']
+}
+
 INSTALLED_APPS = (
     'django.contrib.auth',
     'django.contrib.contenttypes',
