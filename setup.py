@@ -63,7 +63,7 @@ setup(
     ],
 
     install_requires = [
-        'python-openid',
+        'python-openid>=2.2.1',
         'django-registration'
     ],
 
