@@ -60,7 +60,8 @@ class UserAssociation(models.Model):
     """ 
     model to manage association between openid and user 
     """
-    openid_url = models.CharField(primary_key=True, blank=False, max_length=255)
+    openid_url = models.CharField(primary_key=True, blank=False, 
+                            max_length=255)
     user = models.ForeignKey(User)
     
     def __unicode__(self):
@@ -80,7 +81,7 @@ class UserAssociation(models.Model):
                                          'openid': self.openid_url
                                         })
 
-            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [self.user.email],
-                    fail_silently=True)
+            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, 
+                    [self.user.email], fail_silently=True)
         oid_associate.send(sender=self, user=self.user, openid=self.openid_url)
         

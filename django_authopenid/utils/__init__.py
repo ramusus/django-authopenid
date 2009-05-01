@@ -19,7 +19,9 @@ import urllib
 from django.conf import settings
 from django.http import str_to_unicode, get_host
 from django.utils.html import escape
-from openid.extensions import sreg
+
+from openid.consumer.discover import discover
+from openid.extensions import sreg, ax
 try: # needed for some linux distributions like debian
     from openid.yadis import xri
 except ImportError:
@@ -27,11 +29,12 @@ except ImportError:
 
 
 class OpenID(object):
-    def __init__(self, openid_, issued, attrs=None, sreg_=None):
+    def __init__(self, openid_, issued, attrs=None, sreg_=None, ax_=None):
         self.openid = openid_
         self.issued = issued
         self.attrs = attrs or {}
         self.sreg = sreg_ or {}
+        self.ax = ax_
         self.is_iname = (xri.identifierScheme(openid_) == 'XRI')
     
     def __repr__(self):
@@ -39,6 +42,19 @@ class OpenID(object):
     
     def __str__(self):
         return self.openid
+    
+SUPPORTED_EXTENSIONS = {
+    "http://openid.net/srv/ax/1.0": ax,
+    'http://openid.net/sreg/1.0': sreg,
+    'http://openid.net/extensions/sreg/1.1': sreg
+}   
+
+def discover_extensions(openid_url):
+    service = discover(openid_url)
+    found = []
+    for endpoint in service[1]:
+        found = filter(endpoint.usesExtension, SUPPORTED_EXTENSIONS.keys())
+    return found
 
 DEFAULT_NEXT = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
 def clean_next(next):
@@ -72,3 +88,4 @@ def get_url_host(request):
 
 def get_full_url(request):
     return get_url_host(request) + request.get_full_path()
+    

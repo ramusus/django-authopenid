@@ -32,7 +32,8 @@ except ImportError:
     from django_authopenid.utils.importlib import import_module
 
 try:
-    __version__ = __import__('pkg_resources').get_distribution('django_authopenid').version
+    __version__ = __import__('pkg_resources').get_distribution(
+                                    'django_authopenid').version
 except:
     __version__ = '?'
 
@@ -48,11 +49,13 @@ def load_store(path):
     except ImportError, e:
         raise ImproperlyConfigured('Error importing openid store %s: "%s"' % (module, e))
     except ValueError, e:
-        raise ImproperlyConfigured('Error importing openid store. Is OPENID_STORE a correctly defined list or tuple?')        
+        raise ImproperlyConfigured('Error importing openid store. Is OPENID_STORE '
+        'a correctly defined list or tuple?')        
     try:
         cls = getattr(mod, attr)
     except AttributeError:
-        raise ImproperlyConfigured, 'Module "%s" does not define a "%s" openid store' % (module, attr)
+        raise ImproperlyConfigured('Module "%s" does not define a "%s" '
+        'openid store' % (module, attr))
     return cls
     
 DjangoOpenIDStore = load_store(settings.OPENID_STORE)
