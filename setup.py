@@ -35,7 +35,9 @@ setup(
     version = '1.0a',
     description = 'Openid authentification application for Django',
     long_description = \
-"""Django authentification application with openid using django auth contrib. Rhis application allow a user to connect to you website with a legacy account (username/password) or an openid url.""",
+"""Django authentification application with openid using django auth contrib. 
+This application allow a user to connect to you website with a legacy account 
+(username/password) or an openid url.""",
     author = 'Benoit Chesneau',
     author_email = 'bchesneau@gmail.com',
     license = 'Apache License 2',
