@@ -3,7 +3,20 @@
     <head>
         <meta charset="utf-8"/>
         <title>django-authopenid Example App</title>
+        <!--[if IE]>
 
+        <script>
+            // allow IE to recognize HTMl5 elements
+            document.createElement('section');
+            document.createElement('article');
+            document.createElement('aside');
+            document.createElement('footer');
+            document.createElement('header');
+            document.createElement('nav');
+            document.createElement('time');
+
+        </script>
+        <![endif]-->
         {% if request.is_secure %}
         <meta http-equiv="X-XRDS-Location" content="https://{{ request.get_host }}{% url oid_xrdf %}" />
         {% else %}
