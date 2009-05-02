@@ -431,10 +431,14 @@ def xrdf(request, template_name='authopenid/yadis.xrdf'):
     return_to = [
         "%s%s" % (url_host, reverse('user_complete_signin'))
     ]
-    return render(template_name, { 
+    response = render(template_name, { 
         'return_to': return_to 
         }, context_instance=RequestContext(request))
         
+        
+    response['Content-Type'] = "application/xrds+xml"
+    response['X-XRDS-Location']= request.build_absolute_uri(reverse('oid_xrdf'))
+    return response    
         
 @login_required
 def password_change(request, 
