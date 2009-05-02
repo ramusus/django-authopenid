@@ -6,5 +6,6 @@ include NOTICE
 include README
 include ez_setup.py
 recursive-include django_authopenid/templates *
+recursive-include example/static *
 recursive-include example/templates *
 recursive-include docs *
