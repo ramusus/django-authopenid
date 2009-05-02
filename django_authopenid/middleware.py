@@ -19,6 +19,7 @@ from django.http import HttpResponseRedirect
 from django.core.urlresolvers import reverse
 
 from django_authopenid.models import UserAssociation
+from django_authopenid.views import xrdf
 
 __all__ = ["OpenIDMiddleware"]
 
@@ -41,5 +42,6 @@ class OpenIDMiddleware(object):
         if path == "/" and request.META.has_key('HTTP_ACCEPT') and \
                 best_match(['text/html', 'application/xrds+xml'], 
                     request.META['HTTP_ACCEPT']) == 'application/xrds+xml':
-            return HttpResponseRedirect(reverse('oid_xrdf'))
+            response = xrdf(request)
+            response['Content-Type'] = "application/xrds+xml"
         return response
