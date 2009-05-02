@@ -89,12 +89,15 @@ var openid = {
 
   input_id: null,
   provider_url: null,
+  provider_name: null,
 
   init: function(input_id) {
 
     var openid_btns = $('#openid_btns');
 
     this.input_id = input_id;
+    
+    $("#"+ input_id).type = "hidden"
 
     $('#openid_choice').show();
     $('#openid_input_area').empty();
@@ -152,6 +155,7 @@ var openid = {
 
       this.useInputBox(provider);
       this.provider_url = provider['url'];
+      this.provider_name = provider['name'];
 
     } else {
 
@@ -163,12 +167,11 @@ var openid = {
   },
   /* Sign-in button click */
   submit: function() {
-
-    var url = this.provider_url;
+    var url = openid.provider_url;
     if (url) {
       url = url.replace('{username}', $('#openid_username').val());
-      this.setOpenIdUrl(url);
-    }
+      openid.setOpenIdUrl(url);
+    } 
     return true;
   },
   
@@ -215,6 +218,7 @@ var openid = {
 
     var html = '';
     var id = 'openid_username';
+    var name = id;
     var value = '';
     var label = provider['label'];
     var style = '';
@@ -224,10 +228,11 @@ var openid = {
     }
     if (provider['name'] == 'OpenID') {
       id = this.input_id;
+      name = "openid_url";
       value = 'http://';
       style = 'background:#FFF url('+this.img_path+'openid-inputicon.gif) no-repeat scroll 0 50%; padding-left:18px;';
     }
-    html += '<input id="'+id+'" type="text" style="'+style+'" name="'+id+'" value="'+value+'" />' + 
+    html += '<input id="'+id+'" type="text" style="'+style+'" name="'+name+'" value="'+value+'" />' + 
     '<input id="openid_submit" type="submit" value="Sign-In"/>';
 
     input_area.empty();

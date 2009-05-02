@@ -570,8 +570,7 @@ def associate(request, template_name='authopenid/associate.html',
             return ask_openid(request, 
                     form.cleaned_data['openid_url'], 
                     redirect_url, 
-                    on_failure=on_failure, 
-                    sreg_request=None)
+                    on_failure=on_failure)
     else:
         form = openid_form(request.user)
     return render(template_name, {

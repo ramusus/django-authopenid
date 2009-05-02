@@ -12,19 +12,29 @@
 <br />
 	<p class="warning">{{ msg }}</p>
 {% endif %}
-{% if form1.errors %}
-<p class="errors">{% trans "Please correct errors below:" %}<br />
+{% if form2.errors %}
+<div class="errors"><p>{% trans "Please correct errors below:" %}<br />
 	{% if form2.username.errors %} 
 		<span class="error">{{ form2.username.errors|join:", " }}</span>
 	{% endif %}
 	{% if form2.password.errors %} 
 		<span class="error">{{ form2.password.errors|join:", " }}</span>
 	{% endif %}
-</p>
+</p></div>
+<br>
 {% endif %}
+
+{% if form1.errors %}
+<div class="errors">
+    <p><span class="error">{{ form1.openid_url.errors|join:", " }}</span></p>
+</div>
+<br>
+{% endif %}
+<h2>Make a choice:</h2>
+<p> <a href="{% url registration_register %}">Register</a> | <a href="{% url user_signin %}">Log-In</a></p>
 <div class="login">
 
-    <form name="fauth" action="{% url user_signin %}" method="post">
+    <form id="auth_form" name="auth_form" action="{% url user_signin %}" method="post">
     <input type="hidden" name="next" value="{{ next }}" />
 	<fieldset>
 	    
@@ -35,10 +45,8 @@
 		
         <div class="submit-row"><input type="submit" name="blogin" value="{% trans "Sign in" %}"> </div>
 	</fieldset>	
-	<p><a href="{% url registration_register %}">{% trans "Create a new account" %}</a></p>
 </form>
 
-<br />
 <form id="openid_form" name="openid_form" action="{% url user_signin %}" method="post">
     <input type="hidden" name="action" value="verify" />
     <input type="hidden" name="next" value="{{ next }}" />
