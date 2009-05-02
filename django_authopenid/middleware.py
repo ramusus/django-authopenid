@@ -43,6 +43,4 @@ class OpenIDMiddleware(object):
                 best_match(['text/html', 'application/xrds+xml'], 
                     request.META['HTTP_ACCEPT']) == 'application/xrds+xml':
             response = xrdf(request)
-            response['Content-Type'] = "application/xrds+xml"
-            response['X-XRDS-Location']= request.build_absolute_uri(reverse('oid_xrdf'))
         return response
