@@ -1,12 +1,6 @@
 {% extends "base.html" %}
 {% load i18n %}
 
-{% block head %}
-
-
-{% endblock %}
-
-
 {% block content %}
 {% if msg %}
 <br />
@@ -57,7 +51,7 @@
     		<div id="openid_btns"></div>
     	</div>
     	    <div id="openid_input_area">
-                <label for="id_openid_ul">{% trans "OpenId URL :" %}</label>{{ form1.openid_url }}
+                <label for="id_openid_url">{% trans "OpenId URL :" %}</label>{{ form1.openid_url }}
                 <input name="openid_submit" type="submit" value="{% trans "Sign in with OpenID" %}">
             </div>
 		
