@@ -41,5 +41,5 @@ class OpenIDMiddleware(object):
         if path == "/" and request.META.has_key('HTTP_ACCEPT') and \
                 best_match(['text/html', 'application/xrds+xml'], 
                     request.META['HTTP_ACCEPT']) == 'application/xrds+xml':
-            return HttpResponseRedirect(reverse('yadis_xrdf'))
+            return HttpResponseRedirect(reverse('oid_xrdf'))
         return response

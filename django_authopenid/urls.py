@@ -54,5 +54,5 @@ urlpatterns = patterns('',
         name='registration_complete'),
         
     # yadis uri
-    url(r'^yadis.xrdf$', oid_views.xrdf, name='oid_views.yadis_xrdf'),
+    url(r'^yadis.xrdf$', oid_views.xrdf, name='oid_xrdf'),
 )
