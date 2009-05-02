@@ -158,7 +158,7 @@ var openid = {
       this.provider_name = provider['name'];
 
     } else {
-
+      this.provider_url = null;
       this.setOpenIdUrl(provider['url']);
       if (! onload) {
         $('#openid_form').submit();
