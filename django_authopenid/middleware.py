@@ -44,4 +44,5 @@ class OpenIDMiddleware(object):
                     request.META['HTTP_ACCEPT']) == 'application/xrds+xml':
             response = xrdf(request)
             response['Content-Type'] = "application/xrds+xml"
+            response['X-XRDS-Location']= reverse('oid_xrdf')
         return response
