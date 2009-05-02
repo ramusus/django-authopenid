@@ -22,11 +22,11 @@ LANGUAGE_CODE = 'en-us'
 SITE_ID = 1
 USE_I18N = True
 
-MEDIA_ROOT = ''
+MEDIA_ROOT = os.path.join(PROJECT_PATH, 'static')
 
-MEDIA_URL = ''
+MEDIA_URL = '/media'
 
-ADMIN_MEDIA_PREFIX = '/media/'
+ADMIN_MEDIA_PREFIX = '/media/admin/'
 
 ugettext = lambda s: s
 LOGIN_URL = '/%s%s' % (ugettext('account/'), ugettext('signin/'))
