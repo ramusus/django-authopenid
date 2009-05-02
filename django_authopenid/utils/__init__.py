@@ -73,12 +73,15 @@ def from_openid_response(openid_response):
     sreg_resp = sreg.SRegResponse.fromSuccessResponse(openid_response) \
             or []
     ax_resp = ax.FetchResponse.fromSuccessResponse(openid_response)
-    ax_args = ax_resp.getExtensionArgs()
-    ax_resp.parseExtensionArgs(ax_args)
+    ax_args = {}
+    if ax_resp is not None:
+        ax_args = ax_resp.getExtensionArgs()
+        ax_resp.parseExtensionArgs(ax_args)
+        ax_args = ax_resp.data
 
     return OpenID(
         openid_response.identity_url, issued, openid_response.signed_fields, 
-        dict(sreg_resp), ax_resp.data
+        dict(sreg_resp), ax_args
     )
     
 def get_url_host(request):

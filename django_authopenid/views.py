@@ -64,7 +64,7 @@ def ask_openid(request, openid_url, redirect_to, on_failure=None):
     """ basic function to ask openid and return response """
     on_failure = on_failure or signin_failure
     sreg_req = None
-    sreg_ax = None
+    ax_req = None
     
     trust_root = getattr(
         settings, 'OPENID_TRUST_ROOT', get_url_host(request) + '/'
@@ -362,10 +362,10 @@ def register(request, template_name='authopenid/complete.html',
 
     nickname = ''
     email = ''
-    if openid_.sreg:
+    if openid_.sreg is not None:
         nickname = openid_.sreg.get('nickname', '')
         email = openid_.sreg.get('email', '')
-    if openid_.ax and not nickname or not email:
+    if openid_.ax is not None and not nickname or not email:
         if openid_.ax.get('http://schema.openid.net/namePerson/friendly', False):
             nickname = openid_.ax.get('http://schema.openid.net/namePerson/friendly')[0]
         if openid_.ax.get('http://schema.openid.net/contact/email', False):
