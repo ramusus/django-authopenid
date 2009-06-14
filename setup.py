@@ -13,15 +13,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-try:
-    from setuptools import setup, find_packages
-except ImportError:
-    import ez_setup
-    ez_setup.use_setuptools()
-    from setuptools import setup, find_packages
 
 import os
 import sys
+
+
+from ez_setup import use_setuptools
+if 'cygwin' in sys.platform.lower():
+   min_version='0.6c6'
+else:
+   min_version='0.6a9'
+try:
+    use_setuptools(min_version=min_version)
+except TypeError:
+    # If a non-local ez_setup is already imported, it won't be able to
+    # use the min_version kwarg and will bail with TypeError
+    use_setuptools()
+    
+
+from setuptools import setup, find_packages
+
 
 data_files = []
 for dir, dirs, files in os.walk('django_authopenid'):
@@ -32,7 +43,7 @@ for dir, dirs, files in os.walk('django_authopenid'):
 
 setup(
     name = 'django-authopenid',
-    version = '1.0',
+    version = '1.0.1',
     description = 'Openid authentification application for Django',
     long_description = \
 """Django authentification application with openid using django auth contrib. 
@@ -59,11 +70,6 @@ This application allow a user to connect to you website with a legacy account
     packages = find_packages(),
     data_files = data_files,
     include_package_data = True,
-    
-    setup_requires = [
-        'setuptools>=0.6c7',
-    ],
-
     install_requires = [
         'python-openid>=2.2.1',
         'django-registration'
