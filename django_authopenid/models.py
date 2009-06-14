@@ -30,6 +30,7 @@ from django.template.loader import render_to_string
 from django.contrib.auth.models import User
 from django.contrib.sites.models import Site
 from django.db import models
+from django.utils.translation import ugettext_lazy as _
 
 from django_authopenid.signals import oid_associate
 
@@ -60,9 +61,9 @@ class UserAssociation(models.Model):
     """ 
     model to manage association between openid and user 
     """
-    openid_url = models.CharField(primary_key=True, blank=False, 
-                            max_length=255)
-    user = models.ForeignKey(User)
+    openid_url = models.CharField(primary_key=True, blank=False,
+                            max_length=255, verbose_name=_('OpenID URL'))
+    user = models.ForeignKey(User, verbose_name=_('User'))
     
     def __unicode__(self):
         return "Openid %s with user %s" % (self.openid_url, self.user)
@@ -85,3 +86,7 @@ class UserAssociation(models.Model):
                     [self.user.email], fail_silently=True)
         oid_associate.send(sender=self, user=self.user, openid=self.openid_url)
         
+
+    class Meta:
+        verbose_name = _('user association')
+        verbose_name_plural = _('user associations')
