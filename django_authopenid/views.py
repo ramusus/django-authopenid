@@ -78,7 +78,7 @@ def ask_openid(request, openid_url, redirect_to, on_failure=None):
     try:
         auth_request = consumer.begin(openid_url)
     except DiscoveryFailure:
-        msg = _("The OpenID %s was invalid" % openid_url)
+        msg = _("The OpenID %s was invalid") % openid_url
         return on_failure(request, msg)
     
     # get capabilities
@@ -608,7 +608,7 @@ def dissociate(request, template_name="authopenid/dissociate.html",
             openid_url = form.cleaned_data['openid_url']
             msg = ""
             if openid_url not in associated_openids:
-                msg = _("%s is not associated to your account" % openid_url)
+                msg = _("%s is not associated to your account") % openid_url
             
             if not msg:
                 UserAssociation.objects.get(openid_url__exact=openid_url).delete()
