@@ -1,5 +1,5 @@
 include AUTHORS
-INCLUDE CHANGES.MD
+include CHANGES.MD
 include LICENSE
 include LICENSE_DJANGO
 include NOTICE
