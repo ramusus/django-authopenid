@@ -31,11 +31,7 @@ except ImportError:
     # version < 1.1
     from django_authopenid.utils.importlib import import_module
 
-try:
-    __version__ = __import__('pkg_resources').get_distribution(
-                                    'django_authopenid').version
-except:
-    __version__ = '?'
+__version__ = "1.0.1"
 
 # get openidstore to use.
 if not hasattr(settings, 'OPENID_STORE') or not settings.OPENID_STORE:
