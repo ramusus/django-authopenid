@@ -411,7 +411,7 @@ def register(request, template_name='authopenid/complete.html',
     }, context_instance=_build_context(request, extra_context=extra_context))
 
 @login_required
-def signout(request):
+def signout(request, next_page=None, template_name='registration/logged_out.html'):
     """
     signout from the website. Remove openid from session and kill it.
     """
@@ -419,10 +419,16 @@ def signout(request):
         del request.session['openid']
     except KeyError:
         pass
-    next = clean_next(request.GET.get('next'))
+    next = request.GET.get('next')
     logout(request)
+    if next is not None:
+        return HttpResponseRedirect(next)
     
-    return HttpResponseRedirect(next)
+    if next_page is None:
+        return render(template_name, {
+            'title': _('Logged out')}, context_instance=RequestContext(request))
+            
+    return HttpResponseRedirect(next_page or request.path)
     
 def xrdf(request, template_name='authopenid/yadis.xrdf'):
     """ view used to process the xrdf file"""
