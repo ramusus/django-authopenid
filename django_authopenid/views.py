@@ -307,7 +307,7 @@ def is_association_exist(openid_url):
     """ test if an openid is already in database """
     is_exist = True
     try:
-        uassoc = UserAssociation.objects.get(openid_url__exact = openid_url)
+        uassoc = UserAssociation.objects.get(openid_url__exact = str(openid_url))
     except:
         is_exist = False
     return is_exist
