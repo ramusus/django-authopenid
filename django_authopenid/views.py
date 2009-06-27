@@ -414,6 +414,10 @@ def register(request, template_name='authopenid/complete.html',
 def signout(request, next_page=None, template_name='registration/logged_out.html'):
     """
     signout from the website. Remove openid from session and kill it.
+    :attr request: request object
+    :attr next_page: default redirect page after logout
+    :attr template_name: string, name of template to use when next_page isn't set, 
+    'registration/logged_out.html' by default
     """
     try:
         del request.session['openid']
