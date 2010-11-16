@@ -8,12 +8,7 @@
 {% endif %}
 {% if form2.errors %}
 <div class="errors"><p>{% trans "Please correct errors below:" %}<br />
-	{% if form2.username.errors %} 
-		<span class="error">{{ form2.username.errors|join:", " }}</span>
-	{% endif %}
-	{% if form2.password.errors %} 
-		<span class="error">{{ form2.password.errors|join:", " }}</span>
-	{% endif %}
+
 </p></div>
 <br>
 {% endif %}
@@ -31,14 +26,17 @@
     <form id="auth_form" name="auth_form" action="{% url user_signin %}" method="post">
     <input type="hidden" name="next" value="{{ next }}" />
 	<fieldset>
-	    
-	    
 		<legend>{% trans "Sign In Using Your Account ID" %}</legend>
 		<div class="form-row"><label for="id_username">{% trans "Username:" %}</label><br />{{ form2.username }}</div>
+		{% if form2.username.errors %} 
+			<span class="error">{{ form2.username.errors|join:", " }}</span>
+		{% endif %}
 		<div class="form-row"><label for="id_password">{% trans "Password" %}</label><br />{{ form2.password }}</div>
-		
+		{% if form2.password.errors %} 
+			<span class="error">{{ form2.password.errors|join:", " }}</span>
+		{% endif %}
         <div class="submit-row"><input type="submit" name="blogin" value="{% trans "Sign in" %}"> </div>
-	</fieldset>	
+	</fieldset>
 </form>
 
 <form id="openid_form" name="openid_form" action="{% url user_signin %}" method="post">
@@ -62,9 +60,10 @@
 
 {% block extra_scripts %}
 <script type="text/javascript" src="{{ MEDIA_URL }}/js/openid-jquery.js"></script>
+<script type="text/javascript" src="{{ MEDIA_URL }}/js/openid-jquery-en.js"></script>
 <script type="text/javascript">
 $(document).ready(function() {
-    openid.init('id_openid_url');
+    openid.init('openid_url');
 });
 </script>
 <!-- /Simple OpenID Selector -->

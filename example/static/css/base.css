@@ -36,7 +36,7 @@ ul.errorlist li {
     float: right;
 }
 .login {
-    width: 750px;
+    width: 800px;
     clear: both;
 }
 
@@ -57,4 +57,15 @@ header#top {
     height: 40px;
     margin-bottom: 15px;
     clear: both;
+}
+
+#auth_form {
+    display: block;
+    width: 220px;
+    float: left;
+    margin-right: 10px;
+}
+
+span.error {
+    color: red;
 }

@@ -72,9 +72,10 @@
 {% block extra_scripts %}
 {% if not has_openids %}
 <script type="text/javascript" src="{{ MEDIA_URL }}/js/openid-jquery.js"></script>
+<script type="text/javascript" src="{{ MEDIA_URL }}/js/openid-jquery-en.js"></script>
 <script type="text/javascript">
 $(document).ready(function() {
-    openid.init('id_openid_url');
+    openid.init('openid_url');
 });
 </script>
 <!-- /Simple OpenID Selector -->
