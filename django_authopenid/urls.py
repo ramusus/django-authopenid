@@ -24,7 +24,10 @@ from registration import views as reg_views
 
 urlpatterns = patterns('',
     # django registration activate
-    url(r'^activate/(?P<activation_key>\w+)/$', reg_views.activate, name='registration_activate'),
+    url(r'^activate/(?P<activation_key>\w+)/$',
+        reg_views.activate,
+        {'backend': 'registration.backends.default.DefaultBackend'},
+        name='registration_activate'),
     
     # user profile
     
@@ -48,7 +51,10 @@ urlpatterns = patterns('',
     url(r'^signout/$', oid_views.signout, name='user_signout'),
     url(r'^signin/complete/$', oid_views.complete_signin, name='user_complete_signin'),
     url(r'^signin/$', oid_views.signin, name='user_signin'),
-    url(r'^signup/$', reg_views.register, name='registration_register'),
+    url(r'^signup/$',
+        reg_views.register,
+        {'backend': 'registration.backends.default.DefaultBackend'},
+        name='registration_register'),
     url(r'^signup/complete/$',direct_to_template, 
         {'template': 'registration/registration_complete.html'},
         name='registration_complete'),
