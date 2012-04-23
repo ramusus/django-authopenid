@@ -24,6 +24,10 @@ from registration import views as reg_views
 
 urlpatterns = patterns('',
     # django registration activate
+    url(r'^activate/complete/$',
+        direct_to_template,
+        {'template': 'registration/activation_complete.html'},
+        name='registration_activation_complete'),
     url(r'^activate/(?P<activation_key>\w+)/$',
         reg_views.activate,
         {'backend': 'registration.backends.default.DefaultBackend'},
@@ -58,7 +62,11 @@ urlpatterns = patterns('',
     url(r'^signup/complete/$',direct_to_template, 
         {'template': 'registration/registration_complete.html'},
         name='registration_complete'),
-        
+    url(r'^signup/closed/$',
+        direct_to_template,
+        {'template': 'registration/registration_closed.html'},
+        name='registration_disallowed'),
+
     # yadis uri
     url(r'^yadis.xrdf$', oid_views.xrdf, name='oid_xrdf'),
 )
