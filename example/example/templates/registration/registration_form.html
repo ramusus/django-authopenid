@@ -20,6 +20,7 @@
 <p> <a href="{% url registration_register %}">Register</a> | <a href="{% url user_signin %}">Sign-In</a></p>
 
 <form action="" method="post">
+    {% csrf_token %}
     <fieldset>
 	    <legend>{% trans "Create a new account" %}</legend>
 	    <table>

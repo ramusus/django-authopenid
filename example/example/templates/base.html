@@ -23,8 +23,8 @@
         <meta http-equiv="X-XRDS-Location" content="http://{{ request.get_host }}{% url oid_xrdf %}" />  
         {% endif %}
 
-        <link rel="stylesheet" href="{{ MEDIA_URL }}/css/base.css" />
-        <link rel="stylesheet" href="{{ MEDIA_URL }}/css/openid.css" />
+        <link rel="stylesheet" href="{{ STATIC_URL }}css/base.css" />
+        <link rel="stylesheet" href="{{ STATIC_URL }}css/openid.css" />
         {% block head %}
         {% endblock %}
     </head>
@@ -35,7 +35,7 @@
         
         {% block content %}{% endblock %}
         
-        <script type="text/javascript" src="{{ MEDIA_URL }}/js/jquery-1.4.4.min.js"></script>
+        <script type="text/javascript" src="{{ STATIC_URL }}admin/js/jquery.min.js"></script>
 
     	{% block extra_scripts %}{% endblock %}
     	

@@ -13,6 +13,7 @@
 <div class="login">
 
 <form name="openid_form" id="openid_form" action="{% url user_associate %}" method="post">
+    {% csrf_token %}
     <input type="hidden" name="action" value="verify" />
     <input type="hidden" name="next" value="{{ next }}" />
 	<fieldset>
@@ -31,7 +32,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script type="text/javascript" src="{{ MEDIA_URL }}/js/openid-jquery.js"></script>
+<script type="text/javascript" src="{{ STATIC_URL }}/js/openid-jquery.js"></script>
 <script type="text/javascript">
 $(document).ready(function() {
     openid.init('id_openid_url');
