@@ -43,7 +43,7 @@ for dir, dirs, files in os.walk('django_authopenid'):
 
 setup(
     name = 'django-authopenid',
-    version = '1.0.1',
+    version = '1.0.2',
     description = 'Openid authentification application for Django',
     long_description = \
 """Django authentification application with openid using django auth contrib. 

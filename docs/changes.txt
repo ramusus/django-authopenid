@@ -4,6 +4,18 @@
 Changes
 =======
 
+version 1.0.2
+-------------
+
+#. Remove use of get_host and str_to_unicode from utils.__init__.py to make it django 1.5 compatible
+
+[Ed Crewe]
+
+version 1.0.1
+-------------
+
+[benoitc]
+
 version 1.0
 -----------
 
