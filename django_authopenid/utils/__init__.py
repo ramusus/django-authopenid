@@ -17,6 +17,7 @@ import time
 import urllib
 
 from django.conf import settings
+from django.utils.encoding import iri_to_uri
 
 from django.utils.html import escape
 
@@ -62,7 +63,7 @@ DEFAULT_NEXT = getattr(settings, 'OPENID_REDIRECT_NEXT', '/')
 def clean_next(next):
     if next is None:
         return DEFAULT_NEXT
-    next = unicode(urllib.unquote(next), 'utf-8')
+    next = iri_to_uri(urllib.unquote(next))
     next = next.strip()
     if next.startswith('/'):
         return next
