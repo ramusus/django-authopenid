@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from django.conf.urls.defaults import patterns, url
-from django.views.generic.simple import direct_to_template
+from django.views.generic import TemplateView
 
 # views
 from django.contrib.auth import views as auth_views
@@ -25,8 +25,7 @@ from registration import views as reg_views
 urlpatterns = patterns('',
     # django registration activate
     url(r'^activate/complete/$',
-        direct_to_template,
-        {'template': 'registration/activation_complete.html'},
+        TemplateView.as_view(template_name='registration/activation_complete.html'),
         name='registration_activation_complete'),
     url(r'^activate/(?P<activation_key>\w+)/$',
         reg_views.activate,
@@ -59,12 +58,11 @@ urlpatterns = patterns('',
         reg_views.register,
         {'backend': 'registration.backends.default.DefaultBackend'},
         name='registration_register'),
-    url(r'^signup/complete/$',direct_to_template, 
-        {'template': 'registration/registration_complete.html'},
+    url(r'^signup/complete/$',
+        TemplateView.as_view(template_name='registration/registration_complete.html'),
         name='registration_complete'),
     url(r'^signup/closed/$',
-        direct_to_template,
-        {'template': 'registration/registration_closed.html'},
+        TemplateView.as_view(template_name='registration/registration_closed.html'),
         name='registration_disallowed'),
 
     # yadis uri
