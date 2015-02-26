@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright 2007, 2008,2009 by Benoît Chesneau <benoitc@e-engura.org>
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -19,7 +19,12 @@ from django.views.generic import TemplateView
 # views
 from django.contrib.auth import views as auth_views
 from django_authopenid import views as oid_views
-from registration import views as reg_views
+try:
+    from registration.views import register, activate
+except ImportError:
+    from registration.views import ActivationView, RegistrationView
+    register = RegistrationView.as_view()
+    activate = ActivationView.as_view()
 
 
 urlpatterns = patterns('',
@@ -28,12 +33,12 @@ urlpatterns = patterns('',
         TemplateView.as_view(template_name='registration/activation_complete.html'),
         name='registration_activation_complete'),
     url(r'^activate/(?P<activation_key>\w+)/$',
-        reg_views.activate,
+        activate,
         {'backend': 'registration.backends.default.DefaultBackend'},
         name='registration_activate'),
-    
+
     # user profile
-    
+
     url(r'^password/reset/$', auth_views.password_reset,  name='auth_password_reset'),
     url(r'^password/reset/confirm/(?P<uidb36>[0-9A-Za-z]+)-(?P<token>.+)/$',
         auth_views.password_reset_confirm,
@@ -45,7 +50,7 @@ urlpatterns = patterns('',
         auth_views.password_reset_done,
         name='auth_password_reset_done'),
     url(r'^password/$',oid_views.password_change, name='auth_password_change'),
-    
+
     # manage account registration
     url(r'^associate/complete/$', oid_views.complete_associate, name='user_complete_associate'),
     url(r'^associate/$', oid_views.associate, name='user_associate'),
@@ -55,7 +60,7 @@ urlpatterns = patterns('',
     url(r'^signin/complete/$', oid_views.complete_signin, name='user_complete_signin'),
     url(r'^signin/$', oid_views.signin, name='user_signin'),
     url(r'^signup/$',
-        reg_views.register,
+        register,
         {'backend': 'registration.backends.default.DefaultBackend'},
         name='registration_register'),
     url(r'^signup/complete/$',
