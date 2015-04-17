@@ -16,8 +16,7 @@
 from django.conf import settings
 from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.contrib.auth.forms import *
-from django.contrib.auth.models import User
-from django.contrib.auth import login, logout
+from django.contrib.auth import login, logout, get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib.sites.models import Site
 
@@ -334,7 +333,7 @@ def is_association_exist(openid_url):
 
 def register_account(form, _openid):
     """ create an account """
-    user = User.objects.create_user(form.cleaned_data['username'],
+    user = get_user_model().objects.create_user(form.cleaned_data['username'],
                             form.cleaned_data['email'])
     user.backend = "django.contrib.auth.backends.ModelBackend"
     oid_register.send(sender=user, openid=_openid)
