@@ -32,7 +32,7 @@ class OpenIDMiddleware(object):
         request.openid = request.session.get('openid', None)
         request.openids = request.session.get('openids', [])
 
-        rels = UserAssociation.objects.filter(user__id=request.user.id)
+        rels = UserAssociation.objects.filter(user__pk=request.user.pk)
         request.associated_openids = [rel.openid_url for rel in rels]
 
     def process_response(self, request, response):
